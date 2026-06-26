@@ -1,0 +1,868 @@
+@Component
+script SkillManager extends Component
+
+    -- ════════════════════════════════════════════════════════════
+    --  [히어로] VFX RUID
+    -- ════════════════════════════════════════════════════════════
+    property string vfxRUID_BasicHit        = "0fb7f5fdf27648ca9e85a0cfd754f9c2"
+    property string vfxRUID_RushDust        = "ef91af157e1a481cb46a3dc06add959c"
+    property string vfxRUID_RushHit         = "f0f5068c3da743f1addd85e35f2f4b5f"
+    property string vfxRUID_PSCharge        = "4e050b0cdec3479bb3ea4130b6f5e8a4"
+    property string vfxRUID_PSHit           = "522793cef4ff4b79bdf73b9eda9386f8"
+    property string vfxRUID_BraveSlash      = "f5b2ce0a2286437db948e5ebefaf3b29"
+    property string vfxRUID_Shout           = "23b917f95214471cb98a4c026149d817"
+    property string vfxRUID_RagingBlow      = "b79cbdf6d06b487382f03d625a1fc464"
+    property string vfxRUID_Insizing        = "f748f7bb09414111bd194abfa7d510b1"
+    property string vfxRUID_RagingBlowPlus  = "5308ef85369c4f31843d6e8cde4b1012"
+    property string vfxRUID_Valhalla        = "8153d9f35fc54c488666a0eab25d83aa"
+    property string vfxRUID_ValhallaBurst   = "7c3028f7053541a3869a94d3fbe9088b"
+    property string vfxRUID_SpiritCaliber        = "e9d31f44820945dda2be6538ed20742b"
+    property string vfxRUID_SpiritCaliberScreen2 = ""
+
+    -- ════════════════════════════════════════════════════════════
+    --  [신궁] VFX RUID
+    -- ════════════════════════════════════════════════════════════
+    property string vfxRUID_BM_BasicHit      = "387ec9be0573409da315e5b3392f41e4"
+    property string vfxRUID_BM_ArrowBlow     = "84a473e004a34fdea67aa74a87dc75c6"
+    property string vfxRUID_BM_PiercingShot  = "966a6d854fe540939a947e6d488a0bb4"
+    property string vfxRUID_BM_IronArrow     = "95af745a30a04f62b4381cf172460e11"
+    property string vfxRUID_BM_MortalBlow    = "383fc9c308294e619245f4339f9f3697"
+    property string vfxRUID_BM_BoltSweep     = "ee52c56587be4b30b4272c6ac840155c"
+    property string vfxRUID_BM_BoltSweepHit = "4edc4387375a471896c5848bc11286b3"
+    property string vfxRUID_BM_SniperBall    = "07a44ad4208240eaa8c67ca0e8688014"
+    property string vfxRUID_BM_SniperEffect = "6c7b4f7910af41dfbe1348eaf2f8c9e6"
+    property string vfxRUID_BM_SniperHit    = "72fa136a368d4f7eba60ce0d16606be5"
+    property string vfxRUID_BM_Piercing      = "c6c958f1171d4cf7ab3799e54034623c"
+    property string vfxRUID_BM_SplitArrow    = "1edd2a4c515a493c941d8b8fa149c7df"
+    property string vfxRUID_BM_FinalAim      = "a5353f3fc61c47499557d79a646efb83"
+    property string vfxRUID_BM_ArrowBall     = "64f775829e234918bd65e9d22214bb06"
+    property string vfxRUID_BM_BackStep     = "f60a2a227d824b2299269798bbed9510"
+    property string vfxRUID_FAOriginScreen   = "e73ca8e6f7d64c3c9de9e12010f9c93a"
+    property string vfxRUID_FAOriginScreen2  = "a1bdce177fe94d7881355b38c9f259f6"
+    property string vfxRUID_FAOriginHit      = "b36801c6a25e4581952e0df59111daeb"
+
+    -- ════════════════════════════════════════════════════════════
+    --  [히어로] SFX RUID
+    -- ════════════════════════════════════════════════════════════
+    property string sfxRUID_BasicSwing     = "c3c0b94042b74e4e8ec06668f43d6add"
+    property string sfxRUID_BasicHit       = "a2d7ecbf05a945cd88f07132cc63146c"
+    property string sfxRUID_RushStart      = "f5a9f40c07c645c88e069849a566b4ff"
+    property string sfxRUID_RushHit        = "06fbbf0d4bb74b2abce2e7af84e60fb1"
+    property string sfxRUID_PSHit          = ""
+    property string sfxRUID_BraveSlash     = "01641f672ecd4a7b9a7d065ce59f887e"
+    property string sfxRUID_Shout          = ""
+    property string sfxRUID_RagingBlow     = "aa92fddf0e404d35bf6406cef6bc7ad5"
+    property string sfxRUID_Insizing       = "1595d17f21e54eb4ac1eb88c8344c8b7"
+    property string sfxRUID_Valhalla       = "d6b71bed8f0d450fb1fe81ba80a05362"
+    property string sfxRUID_SpiritCaliber  = ""
+
+    -- ════════════════════════════════════════════════════════════
+    --  [신궁] SFX RUID
+    -- ════════════════════════════════════════════════════════════
+    property string sfxRUID_BM_BasicSwing   = ""
+    property string sfxRUID_BM_BasicHit     = ""
+    property string sfxRUID_BM_ArrowBlow    = "b4c345306d4948f1a0b8cc787fd57bef"
+    property string sfxRUID_BM_PiercingShot = ""
+    property string sfxRUID_BM_IronArrow    = "e657afb52ba14bd38fe31b948275cc23"
+    property string sfxRUID_BM_MortalBlow   = "18adc11861a74bbd968708b0f1b35239"
+    property string sfxRUID_BM_BoltSweep    = ""
+    property string sfxRUID_BM_Sniping      = "384e71cfc38a4ab1b8a10963cae6365f"
+    property string sfxRUID_BM_SniperHit   = "81a8c21eaf31429aa21ccaa63afc1b35"
+    property string sfxRUID_BM_Piercing     = ""
+    property string sfxRUID_BM_SplitArrow   = "6f486e77e52e493fb21b54176fe76680"
+    property string sfxRUID_BM_FinalAim     = ""
+    property string sfxRUID_FAOrigin        = ""
+    property string sfxRUID_BM_BackStep     = "7130b2db996b4112af59e188b609c10c"
+
+    -- ════════════════════════════════════════════════════════════
+    --  루프 이펙트 시리얼 추적
+    -- ════════════════════════════════════════════════════════════
+    property integer valhallaSerial   = -1
+    property boolean valhallaIsEffect = false
+    property integer finalAimSerial   = -1
+    property boolean finalAimIsEffect = false
+
+    -- ─── 내부 유틸 ────────────────────────────────────────────
+
+    method integer LookDir()
+        local ctrl = self.Entity.PlayerControllerComponent
+        if isvalid(ctrl) then
+            return ctrl.LookDirectionX >= 0 and 1 or -1
+        end
+        return 1
+    end
+
+    method any GetFC()
+        return self.Entity:GetComponent("script.FighterComponent")
+    end
+
+    method any GetAtk()
+        return self.Entity:GetComponent("script.FighterAttack")
+    end
+
+    method integer GetJobClass()
+        local fc = self:GetFC()
+        if fc == nil then return 0 end
+        ---@type FighterComponent
+        local f = fc
+        return f.JobClass
+    end
+
+    @ExecSpace("ServerOnly")
+    method Entity GetOpponentEntity()
+        local fc = self:GetFC()
+        if fc == nil then return nil end
+        ---@type FighterComponent
+        local f = fc
+        local oppId = f.OppUserId
+        if oppId == "" then return nil end
+        if oppId:len() >= 6 and oppId:sub(1, 6) == "DUMMY_" then
+            local map = self.Entity.CurrentMap
+            if not isvalid(map) then return nil end
+            local comps = map:GetChildComponentsByTypeName("script.DummyFighterComponent", true)
+            for _, comp in ipairs(comps) do
+                ---@type DummyFighterComponent
+                local dc = comp
+                if dc.DummyUserId == oppId then return dc.Entity end
+            end
+            return nil
+        end
+        return _UserService:GetUserEntityByUserId(oppId)
+    end
+
+    -- ─── 쿨다운 헬퍼 ──────────────────────────────────────────
+
+    @ExecSpace("ServerOnly")
+    method void SetSkillCD(integer slot, number cd)
+        local fc = self:GetFC()
+        if fc == nil then return end
+        ---@type FighterComponent
+        local f = fc
+        f.SkillMaxCDs[slot] = cd
+        f.SkillCDs[slot]    = cd
+    end
+
+    -- ─── 외부 진입점 (FighterInput에서 호출) ─────────────────
+
+    @ExecSpace("ServerOnly")
+    method void ExecuteBasicAttack()
+        if self:GetJobClass() == 1 then self:BA_Bowmaster() else self:BA_Hero() end
+    end
+
+    @ExecSpace("ServerOnly")
+    method void ExecuteSkillSlot(integer slot)
+        if self:GetJobClass() == 1 then self:BM_SkillDispatch(slot) else self:Hero_SkillDispatch(slot) end
+    end
+
+    @ExecSpace("ServerOnly")
+    method void ExecuteOrigin()
+        local dir = self:LookDir()
+        local atkComp = self:GetAtk()
+        if atkComp == nil then return end
+        ---@type AttackComponent
+        local atk = atkComp
+        if self:GetJobClass() == 1 then
+            atk:Attack(Vector2(15.0, 0.8), Vector2(dir * 6.0, 0.0), "origin")
+            self:VFX_FAOrigin(dir)
+            log("[SkillMgr] 파이널 에임 오리진!")
+        else
+            atk:Attack(Vector2(12.8, 7.2), Vector2(0, 0), "origin")
+            self:VFX_SpiritCaliber(dir)
+            log("[SkillMgr] 스피릿 칼리버!")
+        end
+    end
+
+    -- ══════════════════════════════════════════════════════════
+    --  히어로 스킬 구현
+    -- ══════════════════════════════════════════════════════════
+
+    @ExecSpace("ServerOnly")
+    method void BA_Hero()
+        local dir = self:LookDir()
+        local atkComp = self:GetAtk()
+        for i = 1, 3 do
+            if atkComp ~= nil then
+                ---@type AttackComponent
+                local atk = atkComp
+                atk:Attack(Vector2(0.8, 0.9), Vector2(dir * 0.5, 0.3), "basic")
+            end
+            self:VFX_BasicHit(dir)
+            if i < 3 then wait(0.07) end
+        end
+        self:SFX_BasicSwing()
+        log("[SkillMgr] 히어로 기본공격 3연타")
+    end
+
+    @ExecSpace("ServerOnly")
+    method void Hero_SkillDispatch(integer slot)
+        if     slot == 1  then self:SetSkillCD(1,  4.0);  self:UseRush1()
+        elseif slot == 2  then self:SetSkillCD(2,  6.0);  self:UsePowerStrike1()
+        elseif slot == 3  then self:SetSkillCD(3,  4.0);  self:UseRush2()
+        elseif slot == 4  then self:SetSkillCD(4,  5.0);  self:UsePowerStrike2()
+        elseif slot == 5  then self:SetSkillCD(5,  8.0);  self:UseBraveSlash()
+        elseif slot == 6  then self:SetSkillCD(6, 10.0);  self:UseShout()
+        elseif slot == 7  then self:SetSkillCD(7,  5.0);  self:UseRagingBlow()
+        elseif slot == 8  then self:SetSkillCD(8,  8.0);  self:UseInsizing()
+        elseif slot == 9  then self:SetSkillCD(9,  5.0);  self:UseRagingBlowPlus()
+        elseif slot == 10 then self:SetSkillCD(10, 25.0); self:UseValhalla()
+        end
+    end
+
+    @ExecSpace("ServerOnly")
+    method void UseRush1()
+        local dir = self:LookDir()
+        local body = self.Entity.RigidbodyComponent
+        if isvalid(body) then body:AddForce(Vector2(dir * 8, 0)) end
+        self:VFX_RushStart(dir)
+        wait(0.12)
+        local atkComp = self:GetAtk()
+        if atkComp ~= nil then
+            ---@type AttackComponent
+            local atk = atkComp
+            atk:Attack(Vector2(1.2, 1.0), Vector2(dir * 0.7, 0.3), "rush1")
+        end
+        self:VFX_RushHit(dir)
+        log("[SkillMgr] 러시 1")
+    end
+
+    @ExecSpace("ServerOnly")
+    method void UseRush2()
+        local dir = self:LookDir()
+        local body = self.Entity.RigidbodyComponent
+        if isvalid(body) then body:AddForce(Vector2(dir * 11, 0)) end
+        self:VFX_RushStart(dir)
+        wait(0.12)
+        local atkComp = self:GetAtk()
+        if atkComp ~= nil then
+            ---@type AttackComponent
+            local atk = atkComp
+            atk:Attack(Vector2(1.5, 1.0), Vector2(dir * 0.9, 0.3), "rush2")
+        end
+        self:VFX_RushHit(dir)
+        log("[SkillMgr] 러시 2 (에어본)")
+    end
+
+    @ExecSpace("ServerOnly")
+    method void UsePowerStrike1()
+        local dir = self:LookDir()
+        self:VFX_PSCharge(dir)
+        wait(0.2)
+        local atkComp = self:GetAtk()
+        if atkComp ~= nil then
+            ---@type AttackComponent
+            local atk = atkComp
+            atk:Attack(Vector2(1.0, 1.0), Vector2(dir * 0.6, 0.3), "power_strike1")
+        end
+        self:VFX_PSHit(dir)
+        log("[SkillMgr] 파워 스트라이크 1")
+    end
+
+    @ExecSpace("ServerOnly")
+    method void UsePowerStrike2()
+        local dir = self:LookDir()
+        self:VFX_PSCharge(dir)
+        local atkComp = self:GetAtk()
+        if atkComp ~= nil then
+            ---@type AttackComponent
+            local atk = atkComp
+            atk:Attack(Vector2(1.0, 1.0), Vector2(dir * 0.6, 0.3), "power_strike2")
+        end
+        self:VFX_PSHit(dir)
+        log("[SkillMgr] 파워 스트라이크 2 (화염DoT)")
+    end
+
+    @ExecSpace("ServerOnly")
+    method void UseBraveSlash()
+        local dir = self:LookDir()
+        local atkComp = self:GetAtk()
+        for i = 1, 3 do
+            if atkComp ~= nil then
+                ---@type AttackComponent
+                local atk = atkComp
+                atk:Attack(Vector2(1.1, 1.0), Vector2(dir * (0.5 + i * 0.15), 0.2), "brave_slash")
+            end
+            self:VFX_BraveSlash(dir, i)
+            if i < 3 then wait(0.12) end
+        end
+        log("[SkillMgr] 브레이브 슬래시 3연베기")
+    end
+
+    @ExecSpace("ServerOnly")
+    method void UseShout()
+        local dir = self:LookDir()
+        local atkComp = self:GetAtk()
+        if atkComp ~= nil then
+            ---@type AttackComponent
+            local atk = atkComp
+            atk:Attack(Vector2(2.5, 1.5), Vector2(dir * 0.8, 0.3), "shout")
+        end
+        self:VFX_Shout(dir)
+        log("[SkillMgr] 샤우트 (원형 AoE + 스턴)")
+    end
+
+    @ExecSpace("ServerOnly")
+    method void UseRagingBlow()
+        local dir = self:LookDir()
+        local atkComp = self:GetAtk()
+        for i = 1, 3 do
+            if atkComp ~= nil then
+                ---@type AttackComponent
+                local atk = atkComp
+                atk:Attack(Vector2(1.0, 1.0), Vector2(dir * 0.6, 0.3), "raging_blow")
+            end
+            self:VFX_RagingBlowHit(dir)
+            wait(0.1)
+        end
+        log("[SkillMgr] 레이징 블로우 3타")
+    end
+
+    @ExecSpace("ServerOnly")
+    method void UseInsizing()
+        local dir = self:LookDir()
+        local atkComp = self:GetAtk()
+        if atkComp ~= nil then
+            ---@type AttackComponent
+            local atk = atkComp
+            atk:Attack(Vector2(1.0, 1.0), Vector2(dir * 0.6, 0.3), "insizing")
+        end
+        self:VFX_Insizing(dir)
+        log("[SkillMgr] 인사이징 (출혈DoT)")
+    end
+
+    @ExecSpace("ServerOnly")
+    method void UseRagingBlowPlus()
+        local dir = self:LookDir()
+        local atkComp = self:GetAtk()
+        if atkComp ~= nil then
+            ---@type AttackComponent
+            local atk = atkComp
+            atk:Attack(Vector2(2.2, 1.6), Vector2(dir * 1.0, 0.3), "raging_blow_plus")
+        end
+        self:VFX_RagingBlowPlus(dir)
+        log("[SkillMgr] 레이징 블로우+ (5차 강화)")
+    end
+
+    @ExecSpace("ServerOnly")
+    method void UseValhalla()
+        local fc = self:GetFC()
+        if fc ~= nil then
+            ---@type FighterComponent
+            local f = fc
+            f:ActivateValhalla()
+        end
+        self:VFX_Valhalla()
+        log("[SkillMgr] 발할라 (슈퍼아머+전크리티컬 10초)")
+    end
+
+    -- ══════════════════════════════════════════════════════════
+    --  신궁 스킬 구현
+    -- ══════════════════════════════════════════════════════════
+
+    @ExecSpace("ServerOnly")
+    method void BA_Bowmaster()
+        local dir = self:LookDir()
+        local pos = self.Entity.TransformComponent.Position
+        local map = self.Entity.CurrentMap
+        if not isvalid(map) then return end
+        if self._T.arrowCount == nil then self._T.arrowCount = 0 end
+        self._T.arrowCount += 1
+        local spawnPos = Vector3(pos.x + dir * 0.5, pos.y + 0.25, pos.z)
+        local arrow = _SpawnService:SpawnByModelId("bmarrow", "bm_arrow_" .. tostring(self._T.arrowCount), spawnPos, map)
+        if isvalid(arrow) then
+            arrow:AddComponent("script.BMArrowProjectile")
+            local proj = arrow:GetComponent("script.BMArrowProjectile")
+            if proj ~= nil then
+                ---@type BMArrowProjectile
+                local p = proj
+                p:Init(dir, self.Entity)
+            end
+            self:VFX_BM_ArrowLaunch(dir, arrow)
+        end
+        log("[SkillMgr] 신궁 기본공격 (화살)")
+    end
+
+    @ExecSpace("ServerOnly")
+    method void BM_SkillDispatch(integer slot)
+        if     slot == 1  then self:SetSkillCD(1,  3.0);  self:BM_ArrowBlow()
+        elseif slot == 2  then self:SetSkillCD(2,  6.0);  self:BM_BackStep()
+        elseif slot == 3  then self:SetSkillCD(3,  4.0);  self:BM_PiercingShot()
+        elseif slot == 4  then self:SetSkillCD(4,  5.0);  self:BM_IronArrow()
+        elseif slot == 5  then self:SetSkillCD(5,  7.0);  self:BM_MortalBlow()
+        elseif slot == 6  then self:SetSkillCD(6,  6.0);  self:BM_BoltSweep()
+        elseif slot == 7  then self:SetSkillCD(7, 12.0);  self:BM_Sniping()
+        elseif slot == 8  then self:SetSkillCD(8,  8.0);  self:BM_Piercing()
+        elseif slot == 9  then self:SetSkillCD(9,  6.0);  self:BM_SplitArrow()
+        elseif slot == 10 then self:SetSkillCD(10, 25.0); self:BM_FinalAimBuff()
+        end
+    end
+
+    @ExecSpace("ServerOnly")
+    method void BM_ArrowBlow()
+        local dir = self:LookDir()
+        local atkComp = self:GetAtk()
+        if atkComp ~= nil then
+            ---@type AttackComponent
+            local atk = atkComp
+            atk:Attack(Vector2(3.5, 0.7), Vector2(dir * 2.0, 0.3), "arrow_blow")
+        end
+        self:VFX_BM_ArrowBlow(dir)
+        log("[SkillMgr] 애로우 블로우")
+    end
+
+    @ExecSpace("ServerOnly")
+    method void BM_BackStep()
+        local dir  = self:LookDir()
+        local body = self.Entity.RigidbodyComponent
+        if isvalid(body) then
+            body:AddForce(Vector2(-dir * 10, 2))
+        end
+        self:VFX_BM_BackStep(dir)
+        log("[SkillMgr] 후방이동")
+    end
+
+    @ExecSpace("ServerOnly")
+    method void BM_PiercingShot()
+        local dir = self:LookDir()
+        local atkComp = self:GetAtk()
+        if atkComp ~= nil then
+            ---@type AttackComponent
+            local atk = atkComp
+            atk:Attack(Vector2(4.5, 0.8), Vector2(dir * 2.5, 0.3), "piercing_shot")
+        end
+        self:VFX_BM_PiercingShot(dir)
+        log("[SkillMgr] 피어싱 샷 (관통+넉백)")
+    end
+
+    @ExecSpace("ServerOnly")
+    method void BM_IronArrow()
+        local dir = self:LookDir()
+        local atkComp = self:GetAtk()
+        if atkComp ~= nil then
+            ---@type AttackComponent
+            local atk = atkComp
+            atk:Attack(Vector2(4.0, 0.7), Vector2(dir * 2.2, 0.3), "iron_arrow")
+        end
+        self:VFX_BM_IronArrow(dir)
+        log("[SkillMgr] 아이언 애로우 (가드 관통)")
+    end
+
+    @ExecSpace("ServerOnly")
+    method void BM_MortalBlow()
+        local dir = self:LookDir()
+        local atkComp = self:GetAtk()
+        if atkComp ~= nil then
+            ---@type AttackComponent
+            local atk = atkComp
+            atk:Attack(Vector2(4.0, 0.7), Vector2(dir * 2.2, 0.3), "mortal_blow")
+        end
+        self:VFX_BM_MortalBlow(dir)
+        log("[SkillMgr] 모탈 블로우 (이속 감소)")
+    end
+
+    @ExecSpace("ServerOnly")
+    method void BM_BoltSweep()
+        local dir = self:LookDir()
+        local atkComp = self:GetAtk()
+        if atkComp ~= nil then
+            ---@type AttackComponent
+            local atk = atkComp
+            atk:Attack(Vector2(3.0, 0.6), Vector2(dir * 1.5, 1.5), "bolt_sweep")
+            wait(0.05)
+            atk:Attack(Vector2(3.0, 0.6), Vector2(dir * 1.8, 0.8), "bolt_sweep")
+            wait(0.05)
+            atk:Attack(Vector2(3.0, 0.6), Vector2(dir * 2.0, 0.2), "bolt_sweep")
+        end
+        self:VFX_BM_BoltSweep(dir)
+        log("[SkillMgr] 볼트 스위프 (대공 부채꼴)")
+    end
+
+    @ExecSpace("ServerOnly")
+    method void BM_Sniping()
+        local dir = self:LookDir()
+        self:VFX_BM_SniperAim(dir)
+        wait(1.0)
+        local atkComp = self:GetAtk()
+        if atkComp ~= nil then
+            ---@type AttackComponent
+            local atk = atkComp
+            atk:Attack(Vector2(12.0, 0.6), Vector2(dir * 5.5, 0.3), "sniping")
+        end
+        self:VFX_BM_SniperFire(dir)
+        log("[SkillMgr] 스나이핑 (가드크래시+스턴)")
+    end
+
+    @ExecSpace("ServerOnly")
+    method void BM_Piercing()
+        local dir = self:LookDir()
+        local atkComp = self:GetAtk()
+        for i = 1, 3 do
+            if atkComp ~= nil then
+                ---@type AttackComponent
+                local atk = atkComp
+                atk:Attack(Vector2(8.0, 1.2), Vector2(dir * 3.5, 0.3), "piercing_shot")
+            end
+            self:VFX_BM_PiercingStorm(dir)
+            if i < 3 then wait(0.1) end
+        end
+        log("[SkillMgr] 피어싱 (전방 화살폭풍)")
+    end
+
+    @ExecSpace("ServerOnly")
+    method void BM_SplitArrow()
+        local dir = self:LookDir()
+        local atkComp = self:GetAtk()
+        if atkComp ~= nil then
+            ---@type AttackComponent
+            local atk = atkComp
+            atk:Attack(Vector2(4.5, 0.7), Vector2(dir * 2.2, 0.3), "arrow_blow")
+            wait(0.15)
+            atk:Attack(Vector2(3.0, 0.6), Vector2(dir * 2.0,  1.0), "arrow_blow")
+            atk:Attack(Vector2(3.0, 0.6), Vector2(dir * 2.5,  0.2), "arrow_blow")
+            atk:Attack(Vector2(3.0, 0.6), Vector2(dir * 1.8, -0.3), "arrow_blow")
+        end
+        self:VFX_BM_SplitArrow(dir)
+        log("[SkillMgr] 스플릿 애로우 (분열)")
+    end
+
+    @ExecSpace("ServerOnly")
+    method void BM_FinalAimBuff()
+        local fc = self:GetFC()
+        if fc ~= nil then
+            ---@type FighterComponent
+            local f = fc
+            f:ActivateFinalAim()
+        end
+        self:VFX_BM_FinalAimBuff()
+        log("[SkillMgr] 파이널 에임 버프 (전크리티컬 10초)")
+    end
+
+    -- ══════════════════════════════════════════════════════════
+    --  ★ 공통 VFX+SFX 헬퍼 (Multicast)
+    --
+    --  TransformComponent.Scale을 읽어 캐릭터 실제 크기 비례 적용.
+    --  거대화 버프 등 런타임 스케일 변화 자동 반영.
+    --
+    --  vfxRuid : "" → BasicParticleType.SparkExplosion 폴백
+    --  sfxRuid : "" → 무음
+    --  dir     : LookDir() 서버 권위값 (+1 or -1)
+    --  offX    : 전방 오프셋 (dir 자동 곱셈 적용)
+    --  offY    : 높이 오프셋
+    --  scX/scY : 베이스 배율 (캐릭터 절대 스케일에 곱해짐)
+    --  order   : OrderInLayer
+    --  col     : 이펙트 색상 틴트 (Color(1,1,1,1) = 원색 유지)
+    -- ══════════════════════════════════════════════════════════
+
+    @ExecSpace("Multicast")
+    method void PlayVFX(string vfxRuid, string sfxRuid, integer dir, number offX, number offY, number scX, number scY, integer order, Color col)
+        local base = self.Entity.TransformComponent.WorldPosition
+        local cs   = self.Entity.TransformComponent.Scale
+        -- 캐릭터 절대 스케일 반영 (방향 부호 제거 후 배율 적용)
+        local sx   = math.abs(cs.x) * scX
+        local sy   = math.abs(cs.y) * scY
+        local wp   = Vector3(base.x + offX * dir, base.y + offY, base.z)
+        local opts = { SortingLayer = "Character", OrderInLayer = order, FlipX = (dir < 0), Color = col }
+        if vfxRuid ~= "" then
+            _EffectService:PlayEffect(vfxRuid, self.Entity, wp, 0, Vector3(sx, sy, 1), false, opts)
+        else
+            _ParticleService:PlayBasicParticle(BasicParticleType.SparkExplosion, self.Entity, wp, 0, Vector3(sx, sy, 1), false, opts)
+        end
+        if sfxRuid ~= "" then _SoundService:PlaySound(sfxRuid, 1.0) end
+    end
+
+    -- ══════════════════════════════════════════════════════════
+    --  히어로 VFX — PlayVFX 통일
+    --  캐릭터 스케일 자동 반영 / 방향 자동 처리
+    -- ══════════════════════════════════════════════════════════
+
+    @ExecSpace("Multicast")
+    method void SFX_BasicSwing()
+        if self.sfxRUID_BasicSwing ~= "" then _SoundService:PlaySound(self.sfxRUID_BasicSwing, 1.0) end
+    end
+
+    @ExecSpace("Multicast")
+    method void SFX_BasicHit()
+        if self.sfxRUID_BasicHit ~= "" then _SoundService:PlaySound(self.sfxRUID_BasicHit, 1.0) end
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_BasicHit(integer dir)
+        self:PlayVFX(self.vfxRUID_BasicHit, self.sfxRUID_BasicHit, dir, 0.8, 0.3, 1.0, 1.0, 10, Color(1,1,1,1))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_RushStart(integer dir)
+        -- offX=-0.4: 뒤쪽 먼지 (dir 자동 적용 → 실제 back)
+        self:PlayVFX(self.vfxRUID_RushDust, self.sfxRUID_RushStart, dir, -0.4, 0.0, 1.2, 0.8, 5, Color(1,1,1,1))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_RushHit(integer dir)
+        self:PlayVFX(self.vfxRUID_RushHit, self.sfxRUID_RushHit, dir, 1.0, 0.3, 1.2, 1.0, 10, Color(1,1,1,1))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_PSCharge(integer dir)
+        self:PlayVFX(self.vfxRUID_PSCharge, "", dir, 0.2, 0.9, 0.8, 0.8, 10, Color(1,1,1,1))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_PSHit(integer dir)
+        self:PlayVFX(self.vfxRUID_PSHit, self.sfxRUID_PSHit, dir, 0.8, 0.2, 1.3, 1.2, 10, Color(1, 0.6, 0.1, 1))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_BraveSlash(integer dir, integer hit)
+        -- hit(1~3): 전방 오프셋 점진 확장
+        self:PlayVFX(self.vfxRUID_BraveSlash, self.sfxRUID_BraveSlash, dir, 0.5 + hit * 0.2, 0.3, 1.1, 1.0, 10, Color(0.8, 1, 0.7, 1))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_Shout(integer dir)
+        self:PlayVFX(self.vfxRUID_Shout, self.sfxRUID_Shout, dir, 0.0, 0.0, 2.0, 2.0, 8, Color(0.6, 0.9, 1, 1))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_RagingBlowHit(integer dir)
+        self:PlayVFX(self.vfxRUID_RagingBlow, self.sfxRUID_RagingBlow, dir, 0.8, 0.3, 1.0, 1.0, 10, Color(1, 0.4, 0.4, 1))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_Insizing(integer dir)
+        self:PlayVFX(self.vfxRUID_Insizing, self.sfxRUID_Insizing, dir, 0.7, 0.3, 1.0, 1.0, 10, Color(1, 0.2, 0.2, 1))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_RagingBlowPlus(integer dir)
+        self:PlayVFX(self.vfxRUID_RagingBlowPlus, self.sfxRUID_RagingBlow, dir, 1.0, 0.3, 1.5, 1.5, 10, Color(1, 0.5, 0.5, 1))
+    end
+
+    -- ── 발할라: 루프 부착 + 버스트 (커스텀 유지 — PlayVFX는 단발 전용) ──
+    @ExecSpace("Multicast")
+    method void VFX_Valhalla()
+        local pos = self.Entity.TransformComponent.WorldPosition
+        if self.valhallaSerial > 0 then
+            if self.valhallaIsEffect then _EffectService:RemoveEffect(self.valhallaSerial)
+            else _ParticleService:RemoveParticle(self.valhallaSerial) end
+            self.valhallaSerial = -1
+        end
+        local aOpts = { SortingLayer = "Character", OrderInLayer = 3, Color = Color(0.7, 0.5, 1, 0.9) }
+        if self.vfxRUID_Valhalla ~= "" then
+            self.valhallaSerial   = _EffectService:PlayEffectAttached(self.vfxRUID_Valhalla, self.Entity, Vector3(0,0,0), 0, Vector3(1.2,1.2,1), true, aOpts)
+            self.valhallaIsEffect = true
+        else
+            self.valhallaSerial   = _ParticleService:PlayBasicParticleAttached(BasicParticleType.Aura, self.Entity, Vector3(0,0,0), 0, Vector3(1.2,1.2,1), true, aOpts)
+            self.valhallaIsEffect = false
+        end
+        local bOpts = { SortingLayer = "Character", OrderInLayer = 5, Color = Color(0.8, 0.6, 1, 1) }
+        if self.vfxRUID_ValhallaBurst ~= "" then
+            _EffectService:PlayEffect(self.vfxRUID_ValhallaBurst, self.Entity, pos, 0, Vector3(1.2,1.2,1), false, bOpts)
+        else
+            _ParticleService:PlayBasicParticle(BasicParticleType.PillarBurst, self.Entity, pos, 0, Vector3(1.2,1.2,1), false, bOpts)
+        end
+        if self.sfxRUID_Valhalla ~= "" then _SoundService:PlaySound(self.sfxRUID_Valhalla, 1.0) end
+        local s = self.valhallaSerial
+        local ie = self.valhallaIsEffect
+        _TimerService:SetTimerOnce(function()
+            if s > 0 then
+                if ie then _EffectService:RemoveEffect(s) else _ParticleService:RemoveParticle(s) end
+            end
+        end, 10.0)
+    end
+
+    -- ── 스피릿 칼리버: 전체화면 공간 베기 (커스텀 유지 — 5점 산탄) ──
+    @ExecSpace("Multicast")
+    method void VFX_SpiritCaliber(integer dir)
+        local pos  = self.Entity.TransformComponent.WorldPosition
+        local cs   = self.Entity.TransformComponent.Scale
+        local sc   = math.abs(cs.x)
+        local opts = { SortingLayer = "Character", OrderInLayer = 20, Color = Color(1, 0.9, 0.3, 1), FlipX = (dir < 0) }
+        if self.vfxRUID_SpiritCaliber ~= "" then
+            _EffectService:PlayEffect(self.vfxRUID_SpiritCaliber, self.Entity, pos, 0, Vector3(3*sc, 3*sc, 1), false, opts)
+        else
+            _ParticleService:PlayBasicParticle(BasicParticleType.EnergyExplosion, self.Entity, pos, 0, Vector3(3*sc, 3*sc, 1), false, opts)
+            _ParticleService:PlayBasicParticle(BasicParticleType.PillarBurst,     self.Entity, pos, 0, Vector3(2.5*sc, 2.5*sc, 1), false, opts)
+            local sOpts = { SortingLayer = "Character", OrderInLayer = 18, Color = Color(1, 0.8, 0.2, 1) }
+            local xs = { -3.0, -1.5, 0.0, 1.5, 3.0 }
+            for i = 1, 5 do
+                local bp = Vector3(pos.x + xs[i] * sc, pos.y + math.fmod(i * 0.6, 1.5), pos.z)
+                _ParticleService:PlayBasicParticle(BasicParticleType.SparkRadialExplosion, self.Entity, bp, 0, Vector3(sc, sc, 1), false, sOpts)
+            end
+        end
+        if self.sfxRUID_SpiritCaliber ~= "" then _SoundService:PlaySound(self.sfxRUID_SpiritCaliber, 1.0) end
+    end
+
+    -- ══════════════════════════════════════════════════════════
+    --  신궁 VFX — PlayVFX 통일
+    -- ══════════════════════════════════════════════════════════
+
+    @ExecSpace("Multicast")
+    method void VFX_BM_BasicHit(integer dir)
+        self:PlayVFX(self.vfxRUID_BM_BasicHit, self.sfxRUID_BM_BasicSwing, dir, 0.6, 0.2, 0.8, 0.8, 10, Color(1,1,1,1))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_BM_ArrowBlow(integer dir)
+        self:PlayVFX(self.vfxRUID_BM_ArrowBlow, self.sfxRUID_BM_ArrowBlow, dir, 1.8, 0.3, 1.2, 0.6, 10, Color(0.9, 0.9, 0.6, 1))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_BM_PiercingShot(integer dir)
+        self:PlayVFX(self.vfxRUID_BM_PiercingShot, self.sfxRUID_BM_PiercingShot, dir, 2.5, 0.3, 1.5, 0.6, 10, Color(0.5, 0.9, 1, 1))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_BM_IronArrow(integer dir)
+        self:PlayVFX(self.vfxRUID_BM_IronArrow, self.sfxRUID_BM_IronArrow, dir, 2.2, 0.3, 1.3, 0.6, 10, Color(0.6, 0.8, 1, 1))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_BM_MortalBlow(integer dir)
+        self:PlayVFX(self.vfxRUID_BM_MortalBlow, self.sfxRUID_BM_MortalBlow, dir, 2.2, 0.3, 1.2, 0.6, 10, Color(0.6, 0.2, 0.9, 1))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_BM_SniperFire(integer dir)
+        local base = self.Entity.TransformComponent.WorldPosition
+        local cs   = self.Entity.TransformComponent.Scale
+        local sc   = math.abs(cs.x)
+        local opts = { SortingLayer = "Character", FlipX = (dir < 0) }
+        -- 1) 화살 투사체 (플레이어 옆에서 발사)
+        if self.vfxRUID_BM_SniperBall ~= "" then
+            opts.OrderInLayer = 15
+            opts.Color = Color(1, 1, 0.6, 1)
+            _EffectService:PlayEffect(self.vfxRUID_BM_SniperBall, self.Entity,
+                Vector3(base.x + dir * 0.3 * sc, base.y + 0.3, base.z),
+                0, Vector3(0.8*sc, 0.4*sc, 1), false, opts)
+        end
+        -- 2) 스킬 발동 이펙트 (전방 중거리)
+        if self.vfxRUID_BM_SniperEffect ~= "" then
+            opts.OrderInLayer = 18
+            opts.Color = Color(1, 0.8, 0.3, 1)
+            _EffectService:PlayEffect(self.vfxRUID_BM_SniperEffect, self.Entity,
+                Vector3(base.x + dir * 2.0 * sc, base.y + 0.3, base.z),
+                0, Vector3(1.2*sc, 0.8*sc, 1), false, opts)
+        end
+        -- 3) 타격 이펙트 (전방 원거리)
+        if self.vfxRUID_BM_SniperHit ~= "" then
+            opts.OrderInLayer = 16
+            opts.Color = Color(1, 0.5, 0, 1)
+            _EffectService:PlayEffect(self.vfxRUID_BM_SniperHit, self.Entity,
+                Vector3(base.x + dir * 3.5 * sc, base.y + 0.3, base.z),
+                0, Vector3(1.0*sc, 0.8*sc, 1), false, opts)
+        end
+        if self.sfxRUID_BM_Sniping  ~= "" then _SoundService:PlaySound(self.sfxRUID_BM_Sniping,  1.0) end
+        if self.sfxRUID_BM_SniperHit ~= "" then _SoundService:PlaySound(self.sfxRUID_BM_SniperHit, 1.0) end
+    end
+
+    -- ── 피어싱 폭풍: 플레이어 위치에서 발생, 전방으로 뻗어나감 ──
+    @ExecSpace("Multicast")
+    method void VFX_BM_PiercingStorm(integer dir)
+        self:PlayVFX(self.vfxRUID_BM_Piercing, self.sfxRUID_BM_Piercing, dir, 0.0, 0.3, 2.0, 1.2, 12, Color(0.6, 0.9, 1, 1))
+    end
+
+    -- ── 후방이동: 뒤 방향 대시 이펙트 ──────────────────────────
+    @ExecSpace("Multicast")
+    method void VFX_BM_BackStep(integer dir)
+        self:PlayVFX(self.vfxRUID_BM_BackStep, self.sfxRUID_BM_BackStep, -dir, 0.5, 0.2, 1.2, 1.0, 8, Color(0.5, 0.8, 1, 1))
+    end
+
+    -- ── 화살 발사: 화살 엔티티에 부착 (커스텀 — Entity 파라미터) ──
+    @ExecSpace("Multicast")
+    method void VFX_BM_ArrowLaunch(integer dir, Entity arrowEnt)
+        if not isvalid(arrowEnt) then return end
+        local opts = { SortingLayer = "Character", OrderInLayer = 8, FlipX = (dir < 0) }
+        if self.vfxRUID_BM_ArrowBall ~= "" then
+            _EffectService:PlayEffectAttached(self.vfxRUID_BM_ArrowBall, arrowEnt, Vector3(0,0,0), 0, Vector3(0.6,0.6,1), true, opts)
+        end
+        if self.sfxRUID_BM_BasicSwing ~= "" then _SoundService:PlaySound(self.sfxRUID_BM_BasicSwing, 1.0) end
+    end
+
+    -- ── 볼트 스위프: 부채꼴 3점 (커스텀 — 다중 위치) ──────────
+    @ExecSpace("Multicast")
+    method void VFX_BM_BoltSweep(integer dir)
+        local pos  = self.Entity.TransformComponent.WorldPosition
+        local cs   = self.Entity.TransformComponent.Scale
+        local sc   = math.abs(cs.x)
+        local opts = { SortingLayer = "Character", OrderInLayer = 10, FlipX = (dir < 0), Color = Color(0.7, 1, 0.6, 1) }
+        -- 스윕 전체 이펙트 (origin 1회)
+        if self.vfxRUID_BM_BoltSweep ~= "" then
+            _EffectService:PlayEffect(self.vfxRUID_BM_BoltSweep, self.Entity, Vector3(pos.x + dir*1.2*sc, pos.y + 0.8, pos.z), 0, Vector3(0.9*sc, 0.9*sc, 1), false, opts)
+        end
+        -- 각 타격점 hit 이펙트
+        local pts  = {
+            Vector3(pos.x + dir*1.2*sc, pos.y + 1.5, pos.z),
+            Vector3(pos.x + dir*1.8*sc, pos.y + 0.8, pos.z),
+            Vector3(pos.x + dir*2.0*sc, pos.y + 0.2, pos.z),
+        }
+        for _, p in ipairs(pts) do
+            if self.vfxRUID_BM_BoltSweepHit ~= "" then
+                _EffectService:PlayEffect(self.vfxRUID_BM_BoltSweepHit, self.Entity, p, 0, Vector3(0.8*sc, 0.4*sc, 1), false, opts)
+            else
+                _ParticleService:PlayBasicParticle(BasicParticleType.SparkLoop, self.Entity, p, 0, Vector3(1.2*sc, 0.5*sc, 1), false, opts)
+            end
+        end
+        if self.sfxRUID_BM_BoltSweep ~= "" then _SoundService:PlaySound(self.sfxRUID_BM_BoltSweep, 1.0) end
+    end
+
+    -- ── 스나이핑 조준선: 회전 90도 레이저 (커스텀) ─────────────
+    @ExecSpace("Multicast")
+    method void VFX_BM_SniperAim(integer dir)
+        local pos  = self.Entity.TransformComponent.WorldPosition
+        local cs   = self.Entity.TransformComponent.Scale
+        local sc   = math.abs(cs.x)
+        local opts = { SortingLayer = "Character", OrderInLayer = 15, Color = Color(1, 0.2, 0.2, 0.8) }
+        _ParticleService:PlayBasicParticle(BasicParticleType.LightningStrikeSharp, self.Entity,
+            Vector3(pos.x + dir * 4*sc, pos.y + 0.3, pos.z), 90, Vector3(0.2, 6*sc, 1), false, opts)
+    end
+
+    -- ── 스플릿 애로우: 분열 + 3방향 산탄 (커스텀) ──────────────
+    @ExecSpace("Multicast")
+    method void VFX_BM_SplitArrow(integer dir)
+        local pos   = self.Entity.TransformComponent.WorldPosition
+        local cs    = self.Entity.TransformComponent.Scale
+        local sc    = math.abs(cs.x)
+        local split = Vector3(pos.x + dir*2.5*sc, pos.y + 0.3, pos.z)
+        local opts  = { SortingLayer = "Character", OrderInLayer = 12, Color = Color(0.9, 1, 0.5, 1) }
+        if self.vfxRUID_BM_SplitArrow ~= "" then
+            _EffectService:PlayEffect(self.vfxRUID_BM_SplitArrow, self.Entity, split, 0, Vector3(0.75*sc,0.75*sc,1), false, opts)
+        else
+            _ParticleService:PlayBasicParticle(BasicParticleType.SparkRadialExplosion, self.Entity, split, 0, Vector3(0.75*sc,0.75*sc,1), false, opts)
+            _ParticleService:PlayBasicParticle(BasicParticleType.SparkLoop, self.Entity, Vector3(split.x, split.y+0.5, split.z), 0, Vector3(0.4*sc,0.2,1), false, opts)
+            _ParticleService:PlayBasicParticle(BasicParticleType.SparkLoop, self.Entity, Vector3(split.x+dir*0.3*sc, split.y-0.3, split.z), 0, Vector3(0.4*sc,0.2,1), false, opts)
+        end
+        if self.sfxRUID_BM_SplitArrow ~= "" then _SoundService:PlaySound(self.sfxRUID_BM_SplitArrow, 1.0) end
+    end
+
+    -- ── 파이널 에임 버프: 루프 부착 (커스텀) ───────────────────
+    @ExecSpace("Multicast")
+    method void VFX_BM_FinalAimBuff()
+        if self.finalAimSerial > 0 then
+            _EffectService:RemoveEffect(self.finalAimSerial)
+            self.finalAimSerial = -1
+        end
+        local aOpts = { SortingLayer = "Character", OrderInLayer = 3, Color = Color(0.4, 0.9, 1, 0.85) }
+        self.finalAimSerial = _EffectService:PlayEffectAttached(self.vfxRUID_BM_FinalAim, self.Entity, Vector3(0,0,0), 0, Vector3(0.5,0.5,1), true, aOpts)
+        if self.sfxRUID_BM_FinalAim ~= "" then _SoundService:PlaySound(self.sfxRUID_BM_FinalAim, 1.0) end
+        local s = self.finalAimSerial
+        _TimerService:SetTimerOnce(function()
+            if s > 0 then _EffectService:RemoveEffect(s) end
+        end, 10.0)
+    end
+
+    -- ── 파이널 에임 오리진: 저격 착탄 (커스텀 — 다중 이펙트) ───
+    @ExecSpace("Multicast")
+    method void VFX_FAOrigin(integer dir)
+        local pos    = self.Entity.TransformComponent.WorldPosition
+        local cs     = self.Entity.TransformComponent.Scale
+        local sc     = math.abs(cs.x)
+        local hitPos = Vector3(pos.x + dir * 6*sc, pos.y + 0.3, pos.z)
+        local opts   = { SortingLayer = "Character", OrderInLayer = 20, FlipX = (dir < 0), Color = Color(0.3, 0.9, 1, 1) }
+        if self.vfxRUID_FAOriginHit ~= "" then
+            _EffectService:PlayEffect(self.vfxRUID_FAOriginHit, self.Entity, hitPos, 0, Vector3(1.5*sc, 0.5*sc, 1), false, opts)
+        end
+        local cOpts = { SortingLayer = "Character", OrderInLayer = 18, Color = Color(0.2, 0.8, 1, 1) }
+        _ParticleService:PlayBasicParticle(BasicParticleType.LightningBlast,           self.Entity, pos,    0, Vector3(2*sc, 2*sc, 1),   false, cOpts)
+        _ParticleService:PlayBasicParticle(BasicParticleType.LightningStrikeSharpTall, self.Entity, hitPos, 0, Vector3(0.3*sc, 5*sc, 1), false, cOpts)
+        if self.sfxRUID_FAOrigin ~= "" then _SoundService:PlaySound(self.sfxRUID_FAOrigin, 1.0) end
+    end
+end

@@ -1,0 +1,23 @@
+{
+  "Id": "",
+  "GameId": "",
+  "EntryKey": "directory://c6d4b9c77fa146b1933b609a1fea76e6",
+  "ContentType": "x-mod/directory",
+  "Content": "",
+  "Usage": 0,
+  "UsePublish": 1,
+  "UseService": 0,
+  "CoreVersion": "26.5.0.0",
+  "StudioVersion": "",
+  "DynamicLoading": 0,
+  "ContentProto": {
+    "Use": "Json",
+    "Json": {
+      "entry_id": "directory://c6d4b9c77fa146b1933b609a1fea76e6",
+      "name": "Projectile",
+      "lock": false,
+      "folding": false,
+      "nameEditable": true
+    }
+  }
+}

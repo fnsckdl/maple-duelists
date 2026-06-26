@@ -1,0 +1,57 @@
+@Component
+script FighterHit extends HitComponent
+    -- ⚠ HitComponent 오버라이드 메서드에는 @ExecSpace 금지 (LEA-3014)
+
+    method void OnHit(Entity attacker, integer damage, boolean isCritical, string attackInfo, int32 hitCount)
+        local fc = self.Entity:GetComponent("script.FighterComponent")
+        if fc == nil then return end
+        ---@type FighterComponent
+        local fighter = fc
+
+        -- 가드 관통 판정 스킬
+        local guardPiercing = (attackInfo == "origin")
+            or (attackInfo == "shout")
+            or (attackInfo == "iron_arrow")
+            or (attackInfo == "sniping")
+
+        -- 피해 적용 (가드 감소 포함)
+        fighter:TakeDamage(damage, guardPiercing)
+
+        -- attackInfo별 특수 효과
+        if attackInfo == "rush2" then
+            -- 2차 러시: 공중 부양
+            local body = self.Entity.RigidbodyComponent
+            if isvalid(body) then
+                body:AddForce(Vector2(0, 6))
+                log("[FighterHit] rush2 공중 부양 적용")
+            end
+
+        elseif attackInfo == "shout" then
+            -- 3차 샤우트: 1초 스턴
+            fighter:ApplyStun(1.0)
+
+        elseif attackInfo == "insizing" then
+            -- 4차 인사이징: 출혈 DoT (30/초 × 5초)
+            fighter:StartDoT(30, 1.0, 5)
+
+        elseif attackInfo == "power_strike2" then
+            -- 2차 파워 스트라이크: 화염 DoT (10/초 × 5초)
+            fighter:StartDoT(10, 1.0, 5)
+
+        elseif attackInfo == "sniping" then
+            -- 4차 스나이핑: 0.5초 기절 (가드 관통은 위 플래그에서 처리)
+            fighter:ApplyStun(0.5)
+
+        elseif attackInfo == "mortal_blow" then
+            -- 3차 모탈 블로우: 3초 이동속도 감소
+            fighter:ApplySlow(3.0)
+
+        end
+    end
+
+    method boolean IsHitTarget(string attackInfo)
+        -- 오리진 스킬: 항상 적중 (가드/회피 불가)
+        if attackInfo == "origin" then return true end
+        return __base:IsHitTarget(attackInfo)
+    end
+end

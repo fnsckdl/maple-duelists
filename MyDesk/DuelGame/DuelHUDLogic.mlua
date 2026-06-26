@@ -1,0 +1,158 @@
+@Logic
+@ExecSpace("ClientOnly")
+script DuelHUDLogic extends Logic
+
+    property TextComponent textRound = "263577f8-de6c-4c16-a0a4-837a8e2dbe58"
+    property TextComponent textTimer = "4ce1728c-1e32-4f32-a0ff-ad13e73876de"
+    property TextComponent textScore = "4a656ec2-a9b2-45a9-8674-7dfc8b6138be"
+    property Entity panelResult = "3841b15d-bbdd-4d6f-9fcd-dafd3bf3e94b"
+    property TextComponent textResult = "7aa7dd82-d7b1-4991-961e-1d54189a5e8e"
+
+    -- myHPFill / myGaugeFill 은 UIMyInfo.mlua 가 담당 (노랑 감쇠 잔상 포함)
+    property SpriteGUIRendererComponent oppHPFill    = "4f2a6335-52fc-4ca2-93ce-a477a10df13a"
+    property SpriteGUIRendererComponent oppGaugeFill = "ea4bbd96-bc19-4618-95fc-1b5254f0ed8b"
+
+    property ButtonComponent btnLeave = "eba1b858-6adf-415c-aa63-c869bc646a06"
+    property any leaveHandler = nil
+
+    property integer lastRound     = -1
+    property integer lastTimerCeil = -1
+    property integer lastMyScore   = -1
+    property integer lastOppScore  = -1
+    property boolean resultShown   = false
+
+    method void OnBeginPlay()
+        if isvalid(self.panelResult)  then self.panelResult.Enable      = false end
+        if isvalid(self.oppHPFill)    then self.oppHPFill.FillAmount    = 1.0 end
+        if isvalid(self.oppGaugeFill) then self.oppGaugeFill.FillAmount = 0.0 end
+
+        if isvalid(self.btnLeave) then
+            self.leaveHandler = self.btnLeave.Entity:ConnectEvent(ButtonClickEvent, function()
+                self:OnLeaveClicked()
+            end)
+        end
+        log("[DuelHUD] 초기화 완료")
+    end
+
+    method void OnEndPlay()
+        if self.leaveHandler ~= nil and isvalid(self.btnLeave) then
+            self.btnLeave.Entity:DisconnectEvent(ButtonClickEvent, self.leaveHandler)
+            self.leaveHandler = nil
+        end
+    end
+
+    method void OnLeaveClicked()
+        -- 서버에 방 퇴장 요청 (훈련: 즉시 종료 / 멀티 진행 중: 기권 / 결과 창: 정리)
+        _GameManagerLogic:RequestLeaveRoom()
+        -- 클라이언트 즉시 캐릭터 선택 화면으로 복귀
+        _CharacterSelectHUD:ShowSelectScreen()
+        -- 결과 패널이 열려 있으면 닫기
+        if isvalid(self.panelResult) then self.panelResult.Enable = false end
+        self.resultShown = false
+        log("[DuelHUD] 방 나가기 요청")
+    end
+
+    method void OnUpdate(number delta)
+        local lp = _UserService.LocalPlayer
+        if not isvalid(lp) then return end
+        local fcComp = lp:GetComponent("script.FighterComponent")
+        if fcComp == nil then return end
+        ---@type FighterComponent
+        local fc = fcComp
+        if fc.MatchMode == "none" then return end
+
+        -- ─── 라운드 ──────────────────────────────────
+        if fc.RoomRound ~= self.lastRound then
+            self.lastRound = fc.RoomRound
+            if isvalid(self.textRound) then
+                if fc.MatchMode == "practice" then
+                    self.textRound.Text = "훈련장"
+                elseif fc.RoomRound == 0 then
+                    self.textRound.Text = "대기 중..."
+                else
+                    self.textRound.Text = "라운드 " .. fc.RoomRound .. " / 5"
+                end
+            end
+        end
+
+        -- ─── 타이머 ──────────────────────────────────
+        local timerCeil = math.ceil(fc.RoomTimer)
+        if timerCeil ~= self.lastTimerCeil then
+            self.lastTimerCeil = timerCeil
+            if isvalid(self.textTimer) then
+                self.textTimer.Text = (fc.MatchMode == "practice") and "∞" or (timerCeil .. "초")
+            end
+        end
+
+        -- ─── 점수 ────────────────────────────────────
+        if fc.MyScore ~= self.lastMyScore or fc.OppScore ~= self.lastOppScore then
+            self.lastMyScore  = fc.MyScore
+            self.lastOppScore = fc.OppScore
+            if isvalid(self.textScore) then
+                self.textScore.Text = fc.MyScore .. " : " .. fc.OppScore
+            end
+        end
+
+        -- ─── 결과 패널 ────────────────────────────────
+        local ended = not fc.RoomActive and fc.RoomRound >= 5
+        if ended and not self.resultShown then
+            self.resultShown = true
+            self:ShowResult(fc)
+        elseif not ended and self.resultShown then
+            self.resultShown = false
+            if isvalid(self.panelResult) then self.panelResult.Enable = false end
+        end
+
+        -- ── 내 HP/게이지는 UIMyInfo.mlua 가 처리 ────────────────
+        -- ── 상대방 HP / 게이지 ────────────────────────────────
+        if fc.OppUserId ~= "" then
+            local oppEnt = self:FindOpponent(fc.OppUserId)
+            if isvalid(oppEnt) then
+                local oppFcComp = oppEnt:GetComponent("script.FighterComponent")
+                if oppFcComp ~= nil then
+                    ---@type FighterComponent
+                    local ofc = oppFcComp
+                    if isvalid(self.oppHPFill) then
+                        local r2 = (ofc.MaxHP > 0) and (ofc.HP / ofc.MaxHP) or 0
+                        self.oppHPFill.FillAmount = math.max(0, math.min(1, r2))
+                    end
+                    if isvalid(self.oppGaugeFill) then
+                        self.oppGaugeFill.FillAmount = math.max(0, math.min(1, ofc.OriginGauge / 100))
+                    end
+                end
+            end
+        end
+    end
+
+    method Entity FindOpponent(string oppId)
+        if oppId == "" then return nil end
+        if oppId:len() >= 6 and oppId:sub(1,6) == "DUMMY_" then
+            local lp = _UserService.LocalPlayer
+            if not isvalid(lp) then return nil end
+            local map = lp.CurrentMap
+            if not isvalid(map) then return nil end
+            local comps = map:GetChildComponentsByTypeName("script.DummyFighterComponent", true)
+            for _, comp in ipairs(comps) do
+                ---@type DummyFighterComponent
+                local dc = comp
+                if dc.DummyUserId == oppId then return dc.Entity end
+            end
+            return nil
+        end
+        return _UserService:GetUserEntityByUserId(oppId)
+    end
+
+    method void ShowResult(FighterComponent fc)
+        if isvalid(self.panelResult) then self.panelResult.Enable = true end
+        if not isvalid(self.textResult) then return end
+        local my = fc.MyScore
+        local op = fc.OppScore
+        if my > op then
+            self.textResult.Text = "승리!\n" .. my .. " : " .. op
+        elseif op > my then
+            self.textResult.Text = "패배...\n" .. my .. " : " .. op
+        else
+            self.textResult.Text = "무승부\n" .. my .. " : " .. op
+        end
+    end
+end

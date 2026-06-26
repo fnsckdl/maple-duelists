@@ -1,0 +1,18 @@
+@Component
+script DummyFighterComponent extends Component
+    -- GameManagerLogic이 StartPracticeRoom에서 "DUMMY_{roomId}"로 덮어씀
+    property string DummyUserId = "DUMMY_P2"
+
+    @ExecSpace("ServerOnly")
+    method void OnBeginPlay()
+        -- 기본 HP 설정 (GM이 룸 컨텍스트를 설정한 뒤 다시 9999로 세팅함)
+        local fc = self.Entity:GetComponent("script.FighterComponent")
+        if fc ~= nil then
+            ---@type FighterComponent
+            local f = fc
+            f.MaxHP = 9999
+            f.HP    = 9999
+        end
+        log("[DummyFighter] 초기화 완료 DummyUserId=" .. self.DummyUserId)
+    end
+end

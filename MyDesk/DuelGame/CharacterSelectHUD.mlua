@@ -1,0 +1,108 @@
+@Logic
+@ExecSpace("ClientOnly")
+script CharacterSelectHUD extends Logic
+
+    -- UI 바인딩 (UIBuilder 가 UUID를 자동 주입)
+    property Entity                    popupRoot    = "0cdf9f09-aeea-4d2a-92fe-a21e8864e25b"
+    property Entity                    btnHeroEnt   = "24392470-1928-4919-b1ea-4096264bbe0b"
+    property Entity                    btnBmEnt     = "0a355890-b435-4652-9f5c-629f22e46378"
+    property ButtonComponent           btnConfirm   = "2b482313-384d-4214-bc79-f74212fb3d6c"
+    property SpriteGUIRendererComponent heroSprite  = "24392470-1928-4919-b1ea-4096264bbe0b"
+    property SpriteGUIRendererComponent bmSprite    = "0a355890-b435-4652-9f5c-629f22e46378"
+
+    property any     heroHandler    = nil
+    property any     bmHandler      = nil
+    property any     confirmHandler = nil
+    property integer selectedJob    = 0     -- 0=히어로, 1=신궁
+
+    method void OnBeginPlay()
+        -- 버튼 이벤트 연결
+        if isvalid(self.btnHeroEnt) then
+            self.heroHandler = self.btnHeroEnt:ConnectEvent(ButtonClickEvent, function()
+                self:SelectJob(0)
+            end)
+        end
+        if isvalid(self.btnBmEnt) then
+            self.bmHandler = self.btnBmEnt:ConnectEvent(ButtonClickEvent, function()
+                self:SelectJob(1)
+            end)
+        end
+        if isvalid(self.btnConfirm) then
+            self.confirmHandler = self.btnConfirm.Entity:ConnectEvent(ButtonClickEvent, function()
+                self:ConfirmSelection()
+            end)
+        end
+
+        -- 기본 선택 = 히어로
+        self:SelectJob(0)
+        self:ShowSelectScreen()
+        log("[CharacterSelectHUD] 초기화 완료")
+    end
+
+    method void OnEndPlay()
+        if self.heroHandler and isvalid(self.btnHeroEnt) then
+            self.btnHeroEnt:DisconnectEvent(ButtonClickEvent, self.heroHandler)
+            self.heroHandler = nil
+        end
+        if self.bmHandler and isvalid(self.btnBmEnt) then
+            self.btnBmEnt:DisconnectEvent(ButtonClickEvent, self.bmHandler)
+            self.bmHandler = nil
+        end
+        if self.confirmHandler and isvalid(self.btnConfirm) then
+            self.btnConfirm.Entity:DisconnectEvent(ButtonClickEvent, self.confirmHandler)
+            self.confirmHandler = nil
+        end
+    end
+
+    -- 선택창 표시
+    method void ShowSelectScreen()
+        if isvalid(self.popupRoot) then
+            self.popupRoot.Enable = true
+        end
+    end
+
+    -- 선택창 숨기기
+    method void HideSelectScreen()
+        if isvalid(self.popupRoot) then
+            self.popupRoot.Enable = false
+        end
+    end
+
+    -- 직업 선택 (버튼 색상 업데이트 포함)
+    method void SelectJob(integer jobClass)
+        self.selectedJob = jobClass
+        self:UpdateButtonHighlight()
+        local name = (jobClass == 0) and "히어로" or "신궁"
+        log("[CharacterSelectHUD] 선택: " .. name)
+    end
+
+    -- 선택된 버튼 강조 표시
+    method void UpdateButtonHighlight()
+        if not isvalid(self.heroSprite) or not isvalid(self.bmSprite) then return end
+        if self.selectedJob == 0 then
+            -- 히어로 선택: 파란 계열
+            self.heroSprite.Color = Color(0.20, 0.55, 1.00, 1.0)
+            self.bmSprite.Color   = Color(0.10, 0.10, 0.16, 1.0)
+        else
+            -- 신궁 선택: 주황 계열
+            self.heroSprite.Color = Color(0.10, 0.10, 0.16, 1.0)
+            self.bmSprite.Color   = Color(0.80, 0.40, 0.10, 1.0)
+        end
+    end
+
+    -- 확인 버튼: 서버에 JobClass 설정 요청 후 팝업 닫기
+    method void ConfirmSelection()
+        local player = _UserService.LocalPlayer
+        if not isvalid(player) then return end
+        local fi = player:GetComponent("script.FighterInput")
+        if fi == nil then
+            log("[CharacterSelectHUD] FighterInput 컴포넌트를 찾을 수 없음")
+            return
+        end
+        ---@type FighterInput
+        local fighterInput = fi
+        fighterInput:RequestSetJobClass(self.selectedJob)
+        self:HideSelectScreen()
+        log("[CharacterSelectHUD] 확인 → RequestSetJobClass(" .. tostring(self.selectedJob) .. ")")
+    end
+end

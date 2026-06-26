@@ -1,0 +1,109 @@
+@Component
+script FighterAttack extends AttackComponent
+    -- ⚠ AttackComponent 오버라이드 메서드에는 @ExecSpace 금지 (LEA-3014)
+
+    method integer CalcDamage(Entity attacker, Entity defender, string attackInfo)
+        -- attackInfo 기반 기본 피해량 결정
+        local baseDamage = 80
+
+        if attackInfo == "basic" then          baseDamage = 80
+        elseif attackInfo == "rush1" then      baseDamage = 150
+        elseif attackInfo == "rush2" then      baseDamage = 200
+        elseif attackInfo == "power_strike1" then baseDamage = 300
+        elseif attackInfo == "power_strike2" then baseDamage = 350
+        elseif attackInfo == "shout" then      baseDamage = 200
+        elseif attackInfo == "raging_blow" then   baseDamage = 80
+        elseif attackInfo == "raging_blow_plus" then baseDamage = 150
+        elseif attackInfo == "insizing" then   baseDamage = 250
+        elseif attackInfo == "origin" then
+            -- 상대 MaxHP의 40% (가드 관통)
+            local defFc = defender:GetComponent("script.FighterComponent")
+            if defFc ~= nil then
+                ---@type FighterComponent
+                local defFighter = defFc
+                baseDamage = math.floor(defFighter.MaxHP * 0.4)
+            else
+                baseDamage = 400
+            end
+        end
+
+        -- 공격자 버프 배율 적용
+        local fc = attacker:GetComponent("script.FighterComponent")
+        if fc ~= nil then
+            ---@type FighterComponent
+            local fighter = fc
+            baseDamage = math.floor(baseDamage * fighter:GetDamageMultiplier())
+        end
+
+        return baseDamage
+    end
+
+    method boolean CalcCritical(Entity attacker, Entity defender, string attackInfo)
+        local fc = attacker:GetComponent("script.FighterComponent")
+        if fc ~= nil then
+            ---@type FighterComponent
+            local fighter = fc
+            -- 발할라: 모든 공격이 크리티컬
+            if fighter.IsValhalla then return true end
+        end
+        return false
+    end
+
+    method boolean IsAttackTarget(Entity defender, string attackInfo)
+        if not isvalid(defender) then return false end
+        if defender == self.Entity then return false end
+
+        -- ── 룸 스코프 필터: 내 룸의 상대방만 공격 가능 ──
+        local myFc = self.Entity:GetComponent("script.FighterComponent")
+        if myFc ~= nil then
+            ---@type FighterComponent
+            local myFighter = myFc
+            local oppId = myFighter.OppUserId
+            if oppId ~= "" then
+                local defPc = defender.PlayerComponent
+                if defPc ~= nil then
+                    -- 실제 플레이어: OppUserId 일치 여부 확인
+                    if defPc.UserId ~= oppId then return false end
+                else
+                    -- 더미 엔티티: DummyFighterComponent.DummyUserId 일치 여부 확인
+                    local dcc = defender:GetComponent("script.DummyFighterComponent")
+                    if dcc == nil then return false end
+                    ---@type DummyFighterComponent
+                    local dc = dcc
+                    if dc.DummyUserId ~= oppId then return false end
+                end
+            end
+        end
+
+        -- 실제 플레이어 또는 더미만 공격 대상
+        local isPlayer = defender.PlayerComponent ~= nil
+        local isDummy  = defender:GetComponent("script.DummyFighterComponent") ~= nil
+        if not isPlayer and not isDummy then return false end
+
+        -- 사망한 파이터 제외
+        local fc = defender:GetComponent("script.FighterComponent")
+        if fc ~= nil then
+            ---@type FighterComponent
+            local defFighter = fc
+            if not defFighter:IsAlive() then return false end
+        end
+        return __base:IsAttackTarget(defender, attackInfo)
+    end
+
+    method void OnAttack(Entity defender)
+        -- 공격 적중 시 게이지 추가
+        local fc = self.Entity:GetComponent("script.FighterComponent")
+        if fc ~= nil then
+            ---@type FighterComponent
+            local fighter = fc
+            fighter:OnAttackHit()
+        end
+        -- 타격 성공음 재생 (기본공격만)
+        local smComp = self.Entity:GetComponent("script.SkillManager")
+        if smComp ~= nil then
+            ---@type SkillManager
+            local sm = smComp
+            sm:SFX_BasicHit()
+        end
+    end
+end

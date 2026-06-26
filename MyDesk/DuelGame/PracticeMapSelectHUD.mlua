@@ -1,0 +1,92 @@
+@Logic
+@ExecSpace("ClientOnly")
+script PracticeMapSelectHUD extends Logic
+
+    -- ── UI 바인딩 ─────────────────────────────────────────
+    property Entity          popup       = "85d6454d-8409-4f81-b167-dfa7bf3fefeb"
+    property ButtonComponent btnMap01    = "231d7aa3-3cca-4972-a20c-95cef9c1c367"
+    property ButtonComponent btnKerning  = "4a7f2032-00f2-478c-9b18-948fceec4fc6"
+    property ButtonComponent btnEllinia  = "5856453b-78f9-4a07-a0d9-4afc269ce86b"
+    property ButtonComponent btnHenesys  = "96669083-ecf8-48c7-9dbe-dbfdc035c602"
+
+    -- ── 이벤트 핸들러 ─────────────────────────────────────
+    property any h01      = nil
+    property any hKerning = nil
+    property any hEllinia = nil
+    property any hHenesys = nil
+
+    method void OnBeginPlay()
+        -- 팝업 초기 숨김
+        if isvalid(self.popup) then
+            self.popup.Enable = false
+            log("[PracticeMapSelectHUD] popup 유효")
+        else
+            log("[PracticeMapSelectHUD] ⚠ popup 무효!")
+        end
+
+        log("[PracticeMapSelectHUD] btn01=" .. tostring(isvalid(self.btnMap01))
+            .. " btnK=" .. tostring(isvalid(self.btnKerning))
+            .. " btnE=" .. tostring(isvalid(self.btnEllinia))
+            .. " btnH=" .. tostring(isvalid(self.btnHenesys)))
+
+        if isvalid(self.btnMap01) then
+            self.h01 = self.btnMap01.Entity:ConnectEvent(ButtonClickEvent, function()
+                self:SelectMap("map01")
+            end)
+        end
+        if isvalid(self.btnKerning) then
+            self.hKerning = self.btnKerning.Entity:ConnectEvent(ButtonClickEvent, function()
+                self:SelectMap("kerningcity")
+            end)
+        end
+        if isvalid(self.btnEllinia) then
+            self.hEllinia = self.btnEllinia.Entity:ConnectEvent(ButtonClickEvent, function()
+                self:SelectMap("ellinia")
+            end)
+        end
+        if isvalid(self.btnHenesys) then
+            self.hHenesys = self.btnHenesys.Entity:ConnectEvent(ButtonClickEvent, function()
+                self:SelectMap("henesys")
+            end)
+        end
+        log("[PracticeMapSelectHUD] 초기화 완료")
+    end
+
+    method void OnEndPlay()
+        if self.h01 ~= nil and isvalid(self.btnMap01) then
+            self.btnMap01.Entity:DisconnectEvent(ButtonClickEvent, self.h01)
+            self.h01 = nil
+        end
+        if self.hKerning ~= nil and isvalid(self.btnKerning) then
+            self.btnKerning.Entity:DisconnectEvent(ButtonClickEvent, self.hKerning)
+            self.hKerning = nil
+        end
+        if self.hEllinia ~= nil and isvalid(self.btnEllinia) then
+            self.btnEllinia.Entity:DisconnectEvent(ButtonClickEvent, self.hEllinia)
+            self.hEllinia = nil
+        end
+        if self.hHenesys ~= nil and isvalid(self.btnHenesys) then
+            self.btnHenesys.Entity:DisconnectEvent(ButtonClickEvent, self.hHenesys)
+            self.hHenesys = nil
+        end
+    end
+
+    method void Show()
+        if isvalid(self.popup) then
+            self.popup.Enable = true
+        end
+        log("[PracticeMapSelectHUD] 맵 선택 팝업 표시")
+    end
+
+    method void Hide()
+        if isvalid(self.popup) then
+            self.popup.Enable = false
+        end
+    end
+
+    method void SelectMap(string mapName)
+        self:Hide()
+        _GameManagerLogic:RequestEnterPracticeOnMap(mapName)
+        log("[PracticeMapSelectHUD] 선택된 맵: " .. mapName)
+    end
+end

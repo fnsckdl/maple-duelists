@@ -1,0 +1,33 @@
+{
+  "Id": "",
+  "GameId": "",
+  "EntryKey": "codeblock://721fdac5-6dd5-4456-bdc0-5ab7e9b3d924",
+  "ContentType": "x-mod/codeblock",
+  "Content": "",
+  "Usage": 0,
+  "UsePublish": 1,
+  "UseService": 0,
+  "CoreVersion": "26.5.0.0",
+  "StudioVersion": "",
+  "DynamicLoading": 0,
+  "ContentProto": {
+    "Use": "Json",
+    "Json": {
+      "CoreVersion": {
+        "Major": 0,
+        "Minor": 2
+      },
+      "ScriptVersion": {
+        "Major": 1,
+        "Minor": 1
+      },
+      "Description": "",
+      "Id": "721fdac5-6dd5-4456-bdc0-5ab7e9b3d924",
+      "Language": 1,
+      "Name": "FighterAttack",
+      "Type": 1,
+      "Source": 0,
+      "Target": null
+    }
+  }
+}

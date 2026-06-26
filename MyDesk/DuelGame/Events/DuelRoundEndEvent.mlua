@@ -1,0 +1,6 @@
+@Event
+script DuelRoundEndEvent extends EventType
+    property string WinnerUserId = ""
+    property integer RoundNumber = 0
+    property boolean IsDraw = false
+end

@@ -1,0 +1,23 @@
+{
+  "Id": "",
+  "GameId": "",
+  "EntryKey": "directory://7885f8a64f614f0e9a1f30054a4deb32",
+  "ContentType": "x-mod/directory",
+  "Content": "",
+  "Usage": 0,
+  "UsePublish": 1,
+  "UseService": 0,
+  "CoreVersion": "26.5.0.0",
+  "StudioVersion": "0.1.0.0",
+  "DynamicLoading": 0,
+  "ContentProto": {
+    "Use": "Json",
+    "Json": {
+      "entry_id": "directory://7885f8a64f614f0e9a1f30054a4deb32",
+      "name": "DuelGame",
+      "lock": false,
+      "folding": false,
+      "nameEditable": true
+    }
+  }
+}

@@ -1,0 +1,86 @@
+@Logic
+@ExecSpace("ClientOnly")
+script DuelMyInfoHUD extends Logic
+
+    -- ── UI 바인딩 (DuelHUD.ui) ──────────────────────────────────
+    property SpriteGUIRendererComponent myHPFill    = "b9fae539-d4bb-43a4-bc19-f577dd4edc7b"   -- 실제 HP (녹색)
+    property SpriteGUIRendererComponent myHPGhost   = "d656effb-b93b-412f-a9fb-0de70f5f6686"   -- 감쇠 잔상 (노랑)
+    property SpriteGUIRendererComponent myGaugeFill = "1d3bfc08-a03a-4553-9b02-fde04cefa697"   -- 오리진 게이지
+    property TextComponent myNickname               = "99347009-5d43-4032-b0f3-2a34b7eda8f9"   -- 닉네임 레이블
+
+    -- ── 런타임 상태 ────────────────────────────────────────────
+    property number  ghostFill     = 1.0     -- 현재 고스트 바 비율 (0~1)
+    property boolean nicknameSet   = false   -- 닉네임 1회 세팅 완료 여부
+    property number  lastMatchMode = -1      -- 로비 전환 감지용
+
+    method void OnBeginPlay()
+        -- 초기 상태 강제 적용
+        if isvalid(self.myHPFill)    then self.myHPFill.FillAmount    = 1.0 end
+        if isvalid(self.myHPGhost)   then self.myHPGhost.FillAmount   = 1.0 end
+        if isvalid(self.myGaugeFill) then self.myGaugeFill.FillAmount = 0.0 end
+        self.ghostFill   = 1.0
+        self.nicknameSet = false
+        log("[DuelMyInfoHUD] 초기화 완료")
+    end
+
+    method void OnUpdate(number delta)
+        local lp = _UserService.LocalPlayer
+        if not isvalid(lp) then return end
+
+        -- 닉네임: PlayerComponent 로드 대기 후 1회 세팅
+        if not self.nicknameSet then
+            local pc = lp.PlayerComponent
+            if isvalid(pc) and isvalid(self.myNickname) then
+                local rawId = pc.UserId
+                local name  = (rawId ~= nil and rawId ~= "") and rawId or "플레이어"
+                if name:len() > 10 then name = name:sub(1, 10) .. "…" end
+                self.myNickname.Text = name
+                self.nicknameSet = true
+                log("[DuelMyInfoHUD] 닉네임 세팅: " .. name)
+            end
+        end
+
+        local fcComp = lp:GetComponent("script.FighterComponent")
+        if fcComp == nil then return end
+        ---@type FighterComponent
+        local fc = fcComp
+
+        -- 로비 상태: 바를 만충 / 게이지 0으로 리셋 (전환 시 1회)
+        if fc.MatchMode == "none" then
+            if self.lastMatchMode ~= 0 then
+                self.lastMatchMode = 0
+                if isvalid(self.myHPFill)    then self.myHPFill.FillAmount    = 1.0 end
+                if isvalid(self.myHPGhost)   then self.myHPGhost.FillAmount   = 1.0 end
+                if isvalid(self.myGaugeFill) then self.myGaugeFill.FillAmount = 0.0 end
+                self.ghostFill = 1.0
+            end
+            return
+        end
+        self.lastMatchMode = 1
+
+        -- ── 실제 HP 바 즉시 갱신 ──────────────────────────────
+        local actualFill = (fc.MaxHP > 0) and math.max(0, math.min(1, fc.HP / fc.MaxHP)) or 0.0
+        if isvalid(self.myHPFill) then
+            self.myHPFill.FillAmount = actualFill
+        end
+
+        -- ── 고스트(노랑) 바: 선형 감쇠 ──────────────────────
+        -- 초당 0.3씩 실제 HP를 추격 → 완전 HP 손실 시 ~3.3초에 수렴
+        if self.ghostFill > actualFill then
+            self.ghostFill = self.ghostFill - 0.3 * delta
+            if self.ghostFill < actualFill then
+                self.ghostFill = actualFill
+            end
+        else
+            self.ghostFill = actualFill  -- HP 회복 시 즉시 동기화
+        end
+        if isvalid(self.myHPGhost) then
+            self.myHPGhost.FillAmount = self.ghostFill
+        end
+
+        -- ── 오리진 게이지 갱신 ───────────────────────────────
+        if isvalid(self.myGaugeFill) then
+            self.myGaugeFill.FillAmount = math.max(0, math.min(1, fc.OriginGauge / 100.0))
+        end
+    end
+end

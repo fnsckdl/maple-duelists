@@ -1,0 +1,763 @@
+@Logic
+script GameManagerLogic extends Logic
+    -- 방별 상태는 self._T (서버 전용 임시 테이블)로 관리한다.
+    -- 클라이언트 HUD는 각 플레이어의 FighterComponent @Sync 필드를 구독한다.
+
+    property any userEnterHandler = nil
+    property any userLeaveHandler = nil
+
+    -- ─── 초기화 / 정리 ──────────────────────────────────────
+
+    @ExecSpace("ServerOnly")
+    method void OnBeginPlay()
+        self._T.MatchRooms   = {}    -- [roomId] = { roomId, p1UserId, p2UserId, ... }
+        self._T.MultiQueue   = {}    -- [userId]  = true
+        self._T.UserToRoom   = {}    -- [userId]  = roomId  (더미 userId도 포함)
+        self._T.RoomCounter  = 0
+        -- 매칭 타임아웃: 큐에서 제거된 후에는 callback이 no-op (guard 패턴)
+        -- SetTimer가 timerId를 반환하지 않는 경우를 대비해 guard 기반으로 처리
+
+        self.userEnterHandler = self:ConnectEvent(UserEnterEvent, function(e)
+            self:OnUserEnter(e.UserId)
+        end)
+        self.userLeaveHandler = self:ConnectEvent(UserLeaveEvent, function(e)
+            self:OnUserLeave(e.UserId)
+        end)
+        log("[GameMgr] 초기화 완료 — 룸 인스턴스 모드")
+    end
+
+    @ExecSpace("ServerOnly")
+    method void OnEndPlay()
+        if self.userEnterHandler ~= nil then
+            self:DisconnectEvent(UserEnterEvent, self.userEnterHandler)
+            self.userEnterHandler = nil
+        end
+        if self.userLeaveHandler ~= nil then
+            self:DisconnectEvent(UserLeaveEvent, self.userLeaveHandler)
+            self.userLeaveHandler = nil
+        end
+    end
+
+    -- ─── 프레임 갱신: 활성 룸 타이머 ───────────────────────
+
+    @ExecSpace("ServerOnly")
+    method void OnUpdate(number delta)
+        if self._T.MatchRooms == nil then return end
+
+        local toEnd = {}
+        for roomId, room in pairs(self._T.MatchRooms) do
+            if room.isRoundActive then
+                room.roundTimer = room.roundTimer - delta
+                -- 초 단위 변화가 있을 때만 FC 타이머 동기화
+                local newCeil = math.ceil(math.max(0, room.roundTimer))
+                if room._lastCeil == nil or newCeil ~= room._lastCeil then
+                    room._lastCeil = newCeil
+                    self:PushTimerToPlayersInRoom(roomId)
+                end
+                if room.roundTimer <= 0 then
+                    room.isRoundActive = false
+                    table.insert(toEnd, roomId)
+                end
+            end
+        end
+
+        for _, roomId in ipairs(toEnd) do
+            self:OnRoundTimeUpInRoom(roomId)
+        end
+    end
+
+    -- ─── 유저 입/퇴장 ────────────────────────────────────────
+
+    @ExecSpace("ServerOnly")
+    method void OnUserEnter(string userId)
+        log("[GameMgr] 유저 입장: " .. userId)
+        -- 자동 모드 배정 없음 — 로비 버튼으로 유저가 직접 선택
+    end
+
+    @ExecSpace("ServerOnly")
+    method void OnUserLeave(string userId)
+        log("[GameMgr] 유저 퇴장: " .. userId)
+        -- 큐에서 제거 → 이미 등록된 45초 타이머 callback이 no-op으로 처리됨
+        if self._T.MultiQueue then
+            self._T.MultiQueue[userId] = nil
+        end
+        local roomId = self._T.UserToRoom and self._T.UserToRoom[userId]
+        if roomId == nil then return end
+
+        local room = self._T.MatchRooms and self._T.MatchRooms[roomId]
+        if room ~= nil then
+            room.isMatchActive = false
+            room.isRoundActive = false
+            self:NotifyRoomAborted(roomId, userId)
+            self:CloseRoom(roomId)
+        end
+    end
+
+    -- ─── 모드 선택 RPC (클라이언트 → 서버) ──────────────────
+
+    @ExecSpace("Server")
+    method void RequestEnterPractice()
+        if self._T.UserToRoom == nil then return end
+        if self._T.UserToRoom[senderUserId] ~= nil then
+            log("[GameMgr] 이미 룸 소속: " .. senderUserId)
+            return
+        end
+        log("[GameMgr] 훈련장 요청 (기본맵): " .. senderUserId)
+        self:StartPracticeRoom(senderUserId, "map01")
+    end
+
+    @ExecSpace("Server")
+    method void RequestEnterPracticeOnMap(string mapName)
+        if self._T.UserToRoom == nil then return end
+        if self._T.UserToRoom[senderUserId] ~= nil then
+            log("[GameMgr] 이미 룸 소속: " .. senderUserId)
+            return
+        end
+        local validMaps = {["map01"]=true, ["kerningcity"]=true, ["ellinia"]=true, ["henesys"]=true}
+        if not validMaps[mapName] then mapName = "map01" end
+        log("[GameMgr] 훈련장 요청 (맵: " .. mapName .. "): " .. senderUserId)
+        self:StartPracticeRoom(senderUserId, mapName)
+    end
+
+    @ExecSpace("Server")
+    method void RequestEnterMulti()
+        if self._T.UserToRoom == nil then return end
+        if self._T.UserToRoom[senderUserId] ~= nil then
+            log("[GameMgr] 이미 룸 소속: " .. senderUserId)
+            return
+        end
+        log("[GameMgr] 멀티 매칭 요청: " .. senderUserId)
+        self:AddToMultiQueue(senderUserId)
+    end
+
+    -- ─── 훈련장 ──────────────────────────────────────────────
+
+    @ExecSpace("ServerOnly")
+    method void StartPracticeRoom(string userId, string mapName)
+        local userEnt = _UserService:GetUserEntityByUserId(userId)
+        if not isvalid(userEnt) then return end
+
+        -- 지정된 맵으로 이동 (map01이 아닌 경우)
+        if mapName ~= nil and mapName ~= "" and mapName ~= "map01" then
+            _TeleportService:TeleportToMapPosition(userEnt, Vector3(0, 0.5, 0), mapName)
+            wait(0.5)
+            userEnt = _UserService:GetUserEntityByUserId(userId)
+            if not isvalid(userEnt) then return end
+        end
+
+        local map = userEnt.CurrentMap
+        if not isvalid(map) then return end
+
+        local roomId  = self:AllocRoomId()
+        local dummyId = "DUMMY_" .. tostring(roomId)
+
+        -- 더미 스폰 시도. 실패 시 맵에 미리 배치된 더미를 사용
+        local spawnPos = userEnt.TransformComponent.Position
+        spawnPos = Vector3(spawnPos.x + 2.0, spawnPos.y + 1.5, spawnPos.z)
+        local dummyEnt = _SpawnService:SpawnByModelId("dummyfighter", "dummy_" .. userId, spawnPos, map)
+
+        if not isvalid(dummyEnt) then
+            local comps = map:GetChildComponentsByTypeName("script.DummyFighterComponent", true)
+            for _, comp in ipairs(comps) do
+                ---@type DummyFighterComponent
+                local dc = comp
+                if dc.DummyUserId == "DUMMY_P2" then
+                    dummyEnt = dc.Entity
+                    break
+                end
+            end
+        end
+
+        self._T.MatchRooms[roomId] = {
+            roomId        = roomId,
+            p1UserId      = userId,
+            p2UserId      = dummyId,
+            matchType     = "practice",
+            p1Score       = 0,
+            p2Score       = 0,
+            currentRound  = 0,
+            isMatchActive = true,
+            isRoundActive = false,
+            roundTimer    = 9999.0,   -- 무제한 (타이머 불감소)
+            isEndingRound = false,
+            dummyEntity   = dummyEnt,
+            _lastCeil     = nil,
+        }
+        self._T.UserToRoom[userId]  = roomId
+        self._T.UserToRoom[dummyId] = roomId
+
+        local fc = userEnt:GetComponent("script.FighterComponent")
+        if fc ~= nil then
+            ---@type FighterComponent
+            local f = fc
+            f.RoomId    = roomId
+            f.MatchMode = "practice"
+            f.OppUserId = dummyId
+        end
+
+        if isvalid(dummyEnt) then
+            local dfc = dummyEnt:GetComponent("script.FighterComponent")
+            if dfc ~= nil then
+                ---@type FighterComponent
+                local df = dfc
+                df.RoomId    = roomId
+                df.MatchMode = "practice"
+                df.OppUserId = userId
+                df.MaxHP     = 9999
+                df.HP        = 9999
+            end
+            local dcc = dummyEnt:GetComponent("script.DummyFighterComponent")
+            if dcc ~= nil then
+                ---@type DummyFighterComponent
+                local dc = dcc
+                dc.DummyUserId = dummyId
+            end
+        end
+
+        log("[GameMgr] 훈련장 생성: roomId=" .. roomId .. " dummy=" .. dummyId)
+        self:StartPracticeSession(roomId)
+    end
+
+    @ExecSpace("ServerOnly")
+    method void StartPracticeSession(integer roomId)
+        local room = self._T.MatchRooms and self._T.MatchRooms[roomId]
+        if room == nil then return end
+        room.isMatchActive = true
+        room.isRoundActive = false
+        room.currentRound  = 0
+
+        -- 스킬 전체 해금 & 플레이어 부활
+        local p1Ent = _UserService:GetUserEntityByUserId(room.p1UserId)
+        if isvalid(p1Ent) then
+            local fc = p1Ent:GetComponent("script.FighterComponent")
+            if fc ~= nil then
+                ---@type FighterComponent
+                local f = fc
+                f.JobLevel = 5
+                f.HP = f.MaxHP
+            end
+            if isvalid(p1Ent.PlayerComponent) then
+                p1Ent.PlayerComponent:ProcessRevive(room.p1UserId)
+            end
+        end
+        self:ResetDummyInRoom(roomId)
+        self:PushRoomStateToPlayers(roomId)
+        log("[GameMgr] 훈련장 세션 시작: roomId=" .. roomId)
+    end
+
+    @ExecSpace("ServerOnly")
+    method void ResetDummyInRoom(integer roomId)
+        local room = self._T.MatchRooms and self._T.MatchRooms[roomId]
+        if room == nil then return end
+        local dEnt = room.dummyEntity
+        if not isvalid(dEnt) then return end
+        local fc = dEnt:GetComponent("script.FighterComponent")
+        if fc ~= nil then
+            ---@type FighterComponent
+            local f = fc
+            f.HP = f.MaxHP
+            log("[GameMgr] 더미 HP 리셋: " .. tostring(f.MaxHP))
+        end
+        if isvalid(dEnt.StateComponent) then
+            dEnt.StateComponent:ChangeState("STAND")
+        end
+    end
+
+    -- ─── 멀티 매칭 ───────────────────────────────────────────
+
+    @ExecSpace("ServerOnly")
+    method void AddToMultiQueue(string userId)
+        self._T.MultiQueue[userId] = true
+        log("[GameMgr] 대기열 추가: " .. userId)
+
+        -- 45초 타임아웃: guard 패턴 — MultiQueue에 없으면 no-op
+        local capturedId = userId
+        _TimerService:SetTimer(self, function()
+            if self._T.MultiQueue and self._T.MultiQueue[capturedId] then
+                self._T.MultiQueue[capturedId] = nil
+                log("[GameMgr] 매칭 타임아웃 (45초): " .. capturedId)
+            end
+        end, 45.0, false)
+
+        -- 즉시 매칭 시도 (큐 제거가 타임아웃보다 먼저 일어나면 callback은 no-op)
+        local waiters = {}
+        for uid, _ in pairs(self._T.MultiQueue) do
+            table.insert(waiters, uid)
+            if #waiters >= 2 then break end
+        end
+
+        if #waiters >= 2 then
+            local p1 = waiters[1]
+            local p2 = waiters[2]
+            self._T.MultiQueue[p1] = nil
+            self._T.MultiQueue[p2] = nil
+            self:CreateMultiRoom(p1, p2)
+        end
+    end
+
+    @ExecSpace("ServerOnly")
+    method void CreateMultiRoom(string p1Id, string p2Id)
+        local roomId = self:AllocRoomId()
+        self._T.MatchRooms[roomId] = {
+            roomId        = roomId,
+            p1UserId      = p1Id,
+            p2UserId      = p2Id,
+            matchType     = "multi",
+            p1Score       = 0,
+            p2Score       = 0,
+            currentRound  = 0,
+            isMatchActive = true,
+            isRoundActive = false,
+            roundTimer    = 60.0,
+            isEndingRound = false,
+            dummyEntity   = nil,
+            _lastCeil     = nil,
+        }
+        self._T.UserToRoom[p1Id] = roomId
+        self._T.UserToRoom[p2Id] = roomId
+
+        local p1Ent = _UserService:GetUserEntityByUserId(p1Id)
+        if isvalid(p1Ent) then
+            local fc = p1Ent:GetComponent("script.FighterComponent")
+            if fc ~= nil then
+                ---@type FighterComponent
+                local f = fc
+                f.RoomId    = roomId
+                f.MatchMode = "multi"
+                f.OppUserId = p2Id
+            end
+        end
+        local p2Ent = _UserService:GetUserEntityByUserId(p2Id)
+        if isvalid(p2Ent) then
+            local fc = p2Ent:GetComponent("script.FighterComponent")
+            if fc ~= nil then
+                ---@type FighterComponent
+                local f = fc
+                f.RoomId    = roomId
+                f.MatchMode = "multi"
+                f.OppUserId = p1Id
+            end
+        end
+
+        -- 랜덤 맵 선택 후 두 플레이어 이동
+        local mapList = {"kerningcity", "ellinia", "henesys"}
+        local selectedMap = mapList[math.random(1, #mapList)]
+        if isvalid(p1Ent) then
+            _TeleportService:TeleportToMapPosition(p1Ent, Vector3(-2.5, 0.5, 0), selectedMap)
+        end
+        if isvalid(p2Ent) then
+            _TeleportService:TeleportToMapPosition(p2Ent, Vector3(2.5, 0.5, 0), selectedMap)
+        end
+        log("[GameMgr] 멀티 룸 생성: " .. roomId .. " (" .. p1Id .. " vs " .. p2Id .. ") 맵: " .. selectedMap)
+        self:StartMatchInRoom(roomId)
+    end
+
+    -- ─── 공통 매치 흐름 ──────────────────────────────────────
+
+    @ExecSpace("ServerOnly")
+    method void StartMatchInRoom(integer roomId)
+        local room = self._T.MatchRooms and self._T.MatchRooms[roomId]
+        if room == nil then return end
+        room.p1Score      = 0
+        room.p2Score      = 0
+        room.currentRound = 0
+        self:PushRoomStateToPlayers(roomId)
+        log("[GameMgr] 룸 " .. roomId .. " 매치 시작")
+        wait(1.0)
+        local r = self._T.MatchRooms and self._T.MatchRooms[roomId]
+        if r == nil then return end
+        self:StartNextRoundInRoom(roomId)
+    end
+
+    @ExecSpace("ServerOnly")
+    method void StartNextRoundInRoom(integer roomId)
+        local room = self._T.MatchRooms and self._T.MatchRooms[roomId]
+        if room == nil then return end
+
+        room.currentRound  = room.currentRound + 1
+        room.roundTimer    = 60.0
+        room.isEndingRound = false
+        room.isRoundActive = true
+        room._lastCeil     = nil
+        log("[GameMgr] 룸 " .. roomId .. " 라운드 " .. room.currentRound .. " 시작")
+
+        local p1Ent = _UserService:GetUserEntityByUserId(room.p1UserId)
+        if isvalid(p1Ent) then
+            local fc = p1Ent:GetComponent("script.FighterComponent")
+            if fc ~= nil then
+                ---@type FighterComponent
+                local f = fc
+                f:ResetForRound(room.currentRound)
+            end
+            if isvalid(p1Ent.PlayerComponent) then
+                p1Ent.PlayerComponent:ProcessRevive(room.p1UserId)
+            end
+        end
+
+        if room.matchType == "practice" then
+            self:ResetDummyInRoom(roomId)
+        else
+            local p2Ent = _UserService:GetUserEntityByUserId(room.p2UserId)
+            if isvalid(p2Ent) then
+                local fc = p2Ent:GetComponent("script.FighterComponent")
+                if fc ~= nil then
+                    ---@type FighterComponent
+                    local f = fc
+                    f:ResetForRound(room.currentRound)
+                end
+                if isvalid(p2Ent.PlayerComponent) then
+                    p2Ent.PlayerComponent:ProcessRevive(room.p2UserId)
+                end
+            end
+        end
+
+        self:PushRoomStateToPlayers(roomId)
+    end
+
+    -- FighterComponent.NotifyDeath 에서 호출
+    @ExecSpace("ServerOnly")
+    method void OnFighterDeath(string deadUserId)
+        if self._T.UserToRoom == nil then return end
+        local roomId = self._T.UserToRoom[deadUserId]
+        if roomId == nil then return end
+
+        local room = self._T.MatchRooms and self._T.MatchRooms[roomId]
+        if room == nil or room.isEndingRound then return end
+
+        -- 훈련장: 더미 또는 플레이어 모두 즉시 부활 (라운드 없음)
+        if room.matchType == "practice" then
+            _TimerService:SetTimer(self, function()
+                local r = self._T.MatchRooms and self._T.MatchRooms[roomId]
+                if r == nil then return end
+                if deadUserId == r.p2UserId then
+                    -- 더미 부활
+                    self:ResetDummyInRoom(roomId)
+                else
+                    -- 플레이어 부활
+                    local ent = _UserService:GetUserEntityByUserId(r.p1UserId)
+                    if isvalid(ent) then
+                        local fc = ent:GetComponent("script.FighterComponent")
+                        if fc ~= nil then
+                            ---@type FighterComponent
+                            local f = fc
+                            f.HP = f.MaxHP
+                        end
+                        if isvalid(ent.PlayerComponent) then
+                            ent.PlayerComponent:ProcessRevive(r.p1UserId)
+                        end
+                    end
+                end
+            end, 0.5, false)
+            return
+        end
+
+        if not room.isRoundActive then return end
+        room.isEndingRound = true
+        room.isRoundActive = false
+
+        if deadUserId == room.p1UserId then
+            room.p2Score = room.p2Score + 1
+            log("[GameMgr] 룸 " .. roomId .. " P2 라운드 승리")
+        else
+            room.p1Score = room.p1Score + 1
+            log("[GameMgr] 룸 " .. roomId .. " P1 라운드 승리")
+        end
+        self:PushRoomStateToPlayers(roomId)
+
+        _TimerService:SetTimer(self, function()
+            local r = self._T.MatchRooms and self._T.MatchRooms[roomId]
+            if r == nil then return end
+            if r.currentRound >= 5 then
+                self:EndMatchInRoom(roomId)
+            else
+                self:StartNextRoundInRoom(roomId)
+            end
+        end, 2.0, false)
+    end
+
+    @ExecSpace("ServerOnly")
+    method void OnRoundTimeUpInRoom(integer roomId)
+        local room = self._T.MatchRooms and self._T.MatchRooms[roomId]
+        if room == nil or room.isEndingRound then return end
+        room.isEndingRound = true
+        room.isRoundActive = false
+
+        local p1HP = self:GetFighterHP(room.p1UserId, roomId)
+        local p2HP = self:GetFighterHP(room.p2UserId, roomId)
+        if p1HP > p2HP then
+            room.p1Score = room.p1Score + 1
+        elseif p2HP > p1HP then
+            room.p2Score = room.p2Score + 1
+        end
+        log("[GameMgr] 룸 " .. roomId .. " 라운드 " .. room.currentRound .. " 시간초과")
+        self:PushRoomStateToPlayers(roomId)
+
+        _TimerService:SetTimer(self, function()
+            local r = self._T.MatchRooms and self._T.MatchRooms[roomId]
+            if r == nil then return end
+            if r.currentRound >= 5 then
+                self:EndMatchInRoom(roomId)
+            else
+                self:StartNextRoundInRoom(roomId)
+            end
+        end, 2.0, false)
+    end
+
+    @ExecSpace("ServerOnly")
+    method void ForceSkipRoundInRoom(integer roomId)
+        local room = self._T.MatchRooms and self._T.MatchRooms[roomId]
+        if room == nil or not room.isRoundActive or room.isEndingRound then return end
+        log("[GameMgr] 룸 " .. roomId .. " 라운드 강제 스킵")
+        room.isRoundActive = false
+        self:OnRoundTimeUpInRoom(roomId)
+    end
+
+    @ExecSpace("ServerOnly")
+    method void EndMatchInRoom(integer roomId)
+        local room = self._T.MatchRooms and self._T.MatchRooms[roomId]
+        if room == nil then return end
+        room.isMatchActive = false
+        room.isRoundActive = false
+        log("[GameMgr] 룸 " .. roomId .. " 매치 종료 — P1:" .. room.p1Score .. " P2:" .. room.p2Score)
+        self:PushRoomStateToPlayers(roomId)
+
+        if room.matchType ~= "practice" then
+            wait(5.0)
+            local r = self._T.MatchRooms and self._T.MatchRooms[roomId]
+            if r ~= nil then self:CloseRoom(roomId) end
+        end
+    end
+
+    @ExecSpace("ServerOnly")
+    method void NotifyRoomAborted(integer roomId, string leftUserId)
+        local room = self._T.MatchRooms and self._T.MatchRooms[roomId]
+        if room == nil then return end
+        local other = (leftUserId == room.p1UserId) and room.p2UserId or room.p1UserId
+        if other == nil or (other:len() >= 6 and other:sub(1, 6) == "DUMMY_") then return end
+        local ent = _UserService:GetUserEntityByUserId(other)
+        if not isvalid(ent) then return end
+        local fc = ent:GetComponent("script.FighterComponent")
+        if fc ~= nil then
+            ---@type FighterComponent
+            local f = fc
+            f.RoomActive = false
+            f.MatchMode  = "none"
+        end
+    end
+
+    @ExecSpace("ServerOnly")
+    method void CloseRoom(integer roomId)
+        local room = self._T.MatchRooms and self._T.MatchRooms[roomId]
+        if room == nil then return end
+        if room.p1UserId ~= "" then
+            self._T.UserToRoom[room.p1UserId] = nil
+        end
+        if room.p2UserId ~= "" then
+            self._T.UserToRoom[room.p2UserId] = nil
+        end
+        if isvalid(room.dummyEntity) then
+            room.dummyEntity:Destroy()
+        end
+        self._T.MatchRooms[roomId] = nil
+        log("[GameMgr] 룸 " .. roomId .. " 정리 완료")
+    end
+
+    -- ─── 상태 동기화 ─────────────────────────────────────────
+
+    @ExecSpace("ServerOnly")
+    method void PushRoomStateToPlayers(integer roomId)
+        local room = self._T.MatchRooms and self._T.MatchRooms[roomId]
+        if room == nil then return end
+        self:PushStateToUser(room.p1UserId, roomId, true)
+        local p2 = room.p2UserId
+        if p2:len() < 6 or p2:sub(1, 6) ~= "DUMMY_" then
+            self:PushStateToUser(p2, roomId, false)
+        end
+    end
+
+    @ExecSpace("ServerOnly")
+    method void PushStateToUser(string userId, integer roomId, boolean isP1)
+        local room = self._T.MatchRooms and self._T.MatchRooms[roomId]
+        if room == nil then return end
+        local ent = _UserService:GetUserEntityByUserId(userId)
+        if not isvalid(ent) then return end
+        local fc = ent:GetComponent("script.FighterComponent")
+        if fc == nil then return end
+        ---@type FighterComponent
+        local f = fc
+        f.RoomRound  = room.currentRound
+        f.RoomTimer  = math.max(0, room.roundTimer)
+        f.MyScore    = isP1 and room.p1Score or room.p2Score
+        f.OppScore   = isP1 and room.p2Score or room.p1Score
+        f.RoomActive = room.isMatchActive
+        f.MatchMode  = room.matchType
+    end
+
+    @ExecSpace("ServerOnly")
+    method void PushTimerToPlayersInRoom(integer roomId)
+        local room = self._T.MatchRooms and self._T.MatchRooms[roomId]
+        if room == nil then return end
+        local t = math.max(0, room.roundTimer)
+
+        local p1Ent = _UserService:GetUserEntityByUserId(room.p1UserId)
+        if isvalid(p1Ent) then
+            local fc = p1Ent:GetComponent("script.FighterComponent")
+            if fc ~= nil then
+                ---@type FighterComponent
+                local f = fc
+                f.RoomTimer = t
+            end
+        end
+
+        local p2 = room.p2UserId
+        if p2:len() >= 6 and p2:sub(1, 6) == "DUMMY_" then return end
+        local p2Ent = _UserService:GetUserEntityByUserId(p2)
+        if isvalid(p2Ent) then
+            local fc = p2Ent:GetComponent("script.FighterComponent")
+            if fc ~= nil then
+                ---@type FighterComponent
+                local f = fc
+                f.RoomTimer = t
+            end
+        end
+    end
+
+    -- ─── 방 나가기 (클라이언트 → 서버) ─────────────────────
+
+    @ExecSpace("Server")
+    method void RequestLeaveRoom()
+        if self._T.UserToRoom == nil then return end
+        local roomId = self._T.UserToRoom[senderUserId]
+        if roomId == nil then return end
+
+        local room = self._T.MatchRooms and self._T.MatchRooms[roomId]
+        if room == nil then return end
+
+        log("[GameMgr] 방 나가기: " .. senderUserId .. " roomId=" .. roomId)
+
+        if room.matchType == "multi" and room.isMatchActive then
+            -- 멀티 진행 중 탈주: 상대에게 5점 부여, 결과 표시 후 정리
+            self._T.UserToRoom[senderUserId] = nil   -- 탈주자는 즉시 새 룸 진입 가능
+            room.isMatchActive = false
+            room.isRoundActive = false
+            room.isEndingRound = false
+
+            if senderUserId == room.p1UserId then
+                room.p2Score = 5
+            else
+                room.p1Score = 5
+            end
+            self:PushRoomStateToPlayers(roomId)
+            self:ResetFighterState(senderUserId)
+
+            -- 남은 플레이어가 결과 확인 후 나갈 시간 부여 후 룸 정리
+            local capturedRoomId = roomId
+            local otherId = (senderUserId == room.p1UserId) and room.p2UserId or room.p1UserId
+            _TimerService:SetTimer(self, function()
+                local r = self._T.MatchRooms and self._T.MatchRooms[capturedRoomId]
+                if r == nil then return end
+                if otherId ~= "" and (otherId:len() < 6 or otherId:sub(1,6) ~= "DUMMY_") then
+                    self:ResetFighterState(otherId)
+                end
+                self:CloseRoom(capturedRoomId)
+            end, 5.0, false)
+        else
+            -- 훈련장 또는 매치 종료 후 결과 창: 즉시 정리
+            self:CloseRoom(roomId)
+            self:ResetFighterState(senderUserId)
+        end
+    end
+
+    @ExecSpace("ServerOnly")
+    method void ResetFighterState(string userId)
+        -- FighterComponent @Sync 필드를 초기화해 클라이언트 HUD를 리셋한다.
+        local ent = _UserService:GetUserEntityByUserId(userId)
+        if not isvalid(ent) then return end
+        local fc = ent:GetComponent("script.FighterComponent")
+        if fc == nil then return end
+        ---@type FighterComponent
+        local f = fc
+        f.RoomActive = false
+        f.MatchMode  = "none"
+        f.OppUserId  = ""
+        f.MyScore    = 0
+        f.OppScore   = 0
+        f.RoomRound  = 0
+        f.RoomTimer  = 60.0
+        -- 훈련/멀티 맵에서 나왔으면 로비 맵(map01)으로 복귀
+        _TeleportService:TeleportToMapPosition(ent, Vector3(0, 0.5, 0), "map01")
+        log("[GameMgr] FighterState 리셋 및 map01 복귀: " .. userId)
+    end
+
+    -- FighterInput.RequestTabAction 에서 senderUserId를 넘겨 호출
+    -- 훈련장: 플레이어 HP/게이지 만충 + 위치 리셋(ProcessRevive) + 더미 리셋
+    -- 멀티:   라운드 강제 스킵 (Tab 테스트용)
+    @ExecSpace("ServerOnly")
+    method void HandleTabAction(string userId)
+        if self._T.UserToRoom == nil then return end
+        local roomId = self._T.UserToRoom[userId]
+        if roomId == nil then return end
+        local room = self._T.MatchRooms and self._T.MatchRooms[roomId]
+        if room == nil then return end
+
+        if room.matchType == "practice" then
+            -- 플레이어 전투 상태 완전 리셋
+            local userEnt = _UserService:GetUserEntityByUserId(userId)
+            if isvalid(userEnt) then
+                local fc = userEnt:GetComponent("script.FighterComponent")
+                if fc ~= nil then
+                    ---@type FighterComponent
+                    local f = fc
+                    f.HP           = f.MaxHP
+                    f.OriginGauge  = 0
+                    f.IsStunned    = false
+                    f.IsGuarding   = false
+                    f.IsValhalla   = false
+                    f.SuperArmor   = false
+                    f.FinalAimBuff = false
+                    f.IsSlowed     = false
+                    f.DotTicksLeft = 0
+                    for i = 1, 10 do f.SkillCDs[i] = 0 end
+                end
+                -- 스폰 포인트로 위치 리셋 (ProcessRevive가 처리)
+                if isvalid(userEnt.PlayerComponent) then
+                    userEnt.PlayerComponent:ProcessRevive(userId)
+                end
+            end
+            self:ResetDummyInRoom(roomId)
+            log("[GameMgr] T키 훈련장 완전 리셋: " .. userId)
+        else
+            self:ForceSkipRoundInRoom(roomId)
+        end
+    end
+
+    -- ─── 유틸 ────────────────────────────────────────────────
+
+    @ExecSpace("ServerOnly")
+    method integer AllocRoomId()
+        self._T.RoomCounter = self._T.RoomCounter + 1
+        return self._T.RoomCounter
+    end
+
+    @ExecSpace("ServerOnly")
+    method integer GetFighterHP(string userId, integer roomId)
+        if userId:len() >= 6 and userId:sub(1, 6) == "DUMMY_" then
+            local room = self._T.MatchRooms and self._T.MatchRooms[roomId]
+            if room == nil then return 0 end
+            local dEnt = room.dummyEntity
+            if not isvalid(dEnt) then return 0 end
+            local fc = dEnt:GetComponent("script.FighterComponent")
+            if fc == nil then return 0 end
+            ---@type FighterComponent
+            local f = fc
+            return f.HP
+        end
+        local ent = _UserService:GetUserEntityByUserId(userId)
+        if not isvalid(ent) then return 0 end
+        local fc = ent:GetComponent("script.FighterComponent")
+        if fc == nil then return 0 end
+        ---@type FighterComponent
+        local f = fc
+        return f.HP
+    end
+end

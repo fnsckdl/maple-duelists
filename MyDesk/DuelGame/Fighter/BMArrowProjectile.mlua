@@ -1,0 +1,102 @@
+@Component
+script BMArrowProjectile extends Component
+
+    property number  speed   = 10.0
+    property number  maxDist = 10.0
+    property string  hitRUID = "387ec9be0573409da315e5b3392f41e4"  -- 파이널 어택:활 hit/0
+    property integer initDir = 0  -- 0=미초기화 / 1=오른쪽 / -1=왼쪽
+
+    -- BA_Bowmaster에서 스폰 직후 호출 (dir, 발사자 엔티티)
+    @ExecSpace("ServerOnly")
+    method void Init(integer dir, Entity shooter)
+        self._T.shooter = shooter
+        self._T.dist    = 0.0
+        self._T.done    = false
+        self.initDir    = dir
+    end
+
+    @ExecSpace("ServerOnly")
+    method void OnUpdate(number delta)
+        if self.initDir == 0 then return end
+        if self._T.done then return end
+
+        local moveD = self.speed * delta
+        self.Entity.TransformComponent:Translate(self.initDir * moveD, 0)
+        self._T.dist = self._T.dist + moveD
+
+        -- 최대 사거리 초과 → 소멸
+        if self._T.dist >= self.maxDist then
+            self._T.done = true
+            self.Entity:Destroy()
+            return
+        end
+
+        -- 적 근접 체크 (발사자 제외)
+        local myPos = self.Entity.TransformComponent.Position
+
+        -- 실제 플레이어 체크
+        for _, user in ipairs(_UserService.UserEntities.Values) do
+            if isvalid(user) and user ~= self._T.shooter then
+                local tp = user.TransformComponent.Position
+                local dx = myPos.x - tp.x
+                local dy = myPos.y - tp.y
+                if dx*dx + dy*dy < 0.36 then  -- 반경 0.6 world unit
+                    self:DoHit(myPos)
+                    return
+                end
+            end
+        end
+
+        -- 더미 엔티티 체크 (_UserService에 포함되지 않으므로 별도 스캔)
+        local map = self.Entity.CurrentMap
+        if isvalid(map) then
+            local dummies = map:GetChildComponentsByTypeName("script.DummyFighterComponent", true)
+            for _, dc in ipairs(dummies) do
+                if isvalid(dc) then
+                    local dEnt = dc.Entity
+                    if isvalid(dEnt) and dEnt ~= self._T.shooter then
+                        local tp = dEnt.TransformComponent.Position
+                        local dx = myPos.x - tp.x
+                        local dy = myPos.y - tp.y
+                        if dx*dx + dy*dy < 0.36 then
+                            self:DoHit(myPos)
+                            return
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    -- 피격 처리: 발사자의 FighterAttack으로 AttackFrom 호출
+    @ExecSpace("ServerOnly")
+    method void DoHit(Vector3 pos)
+        self._T.done = true
+        local shooter = self._T.shooter
+        if isvalid(shooter) then
+            local atk = shooter.AttackComponent
+            if isvalid(atk) then
+                atk:AttackFrom(
+                    Vector2(0.6, 0.7),
+                    Vector2(pos.x, pos.y),
+                    "basic_bm"
+                )
+            end
+        end
+        self:ShowHitEffect(pos.x, pos.y, pos.z)
+        self.Entity:Destroy()
+    end
+
+    -- 피격 VFX (클라이언트 — 엔티티 소멸 후에도 재생됨)
+    @ExecSpace("Client")
+    method void ShowHitEffect(number px, number py, number pz)
+        if self.hitRUID == "" then return end
+        local m = self.Entity.CurrentMap
+        if not isvalid(m) then return end
+        _EffectService:PlayEffect(
+            self.hitRUID, m,
+            Vector3(px, py, pz), 0, Vector3(1, 1, 1), false,
+            { SortingLayer = "Character", OrderInLayer = 10 }
+        )
+    end
+end

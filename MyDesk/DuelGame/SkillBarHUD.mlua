@@ -1,0 +1,320 @@
+@Logic
+@ExecSpace("ClientOnly")
+script SkillBarHUD extends Logic
+
+    -- ── 스킬 아이콘 스프라이트 ───────────────────────────────────────────
+    -- 슬롯 0: 기본공격 [Ctrl]
+    property SpriteGUIRendererComponent icon0  = "72f51fcf-2003-4769-bd32-39626eaf459e"
+    -- 슬롯 1: 러시 1 [X]
+    property SpriteGUIRendererComponent icon1  = "e2981ea6-11f0-47bd-b71c-0f0b4e8d7a66"
+    -- 슬롯 2: 파워 스트라이크1 [C]
+    property SpriteGUIRendererComponent icon2  = "7d5fb2ce-970a-4c50-aaac-6c3814f77b62"
+    -- 슬롯 3: 러시 2 [Z]
+    property SpriteGUIRendererComponent icon3  = "9262915a-ffe3-4ff1-b9a8-d765a59d04dc"
+    -- 슬롯 4: 파워 스트라이크2 [F]
+    property SpriteGUIRendererComponent icon4  = "d85acc7e-12ad-4cda-9061-afb15a186618"
+    -- 슬롯 5: 브레이브 슬래시 [Q]
+    property SpriteGUIRendererComponent icon5  = "c08a58c3-7b44-4e9b-9862-005749520300"
+    -- 슬롯 6: 샤우트 [E]
+    property SpriteGUIRendererComponent icon6  = "c148857d-1a5d-43bc-8a0f-249c70174897"
+    -- 슬롯 7: 레이징 블로우 [1]
+    property SpriteGUIRendererComponent icon7  = "2f340c9f-d3f7-4611-86f3-397db24618f4"
+    -- 슬롯 8: 인사이징 [2]
+    property SpriteGUIRendererComponent icon8  = "cf302f1e-7959-47ac-99e2-bb8261584336"
+    -- 슬롯 9: 레이징 블로우+ [3]
+    property SpriteGUIRendererComponent icon9  = "c72a18a6-fdb4-47da-b797-8bf0cd116a5d"
+    -- 슬롯 10: 발할라 [4]
+    property SpriteGUIRendererComponent icon10 = "11c02bd2-7e00-4eac-8137-03539cf5bae6"
+
+    -- ── 스킬 아이콘 RUID (Inspector에서 교체 가능 / 에디터 직접 붙여넣기도 OK) ──
+    -- 슬롯 0: 기본공격 [Ctrl] — 소드 마스터리 (Hero 2차)
+    property string iconRUID0  = "e304bb1f471545dabe68e1e1f791a10a"
+    -- 슬롯 1: 러시 1 [X] — 돌진 (Hero 계열 1차)
+    property string iconRUID1  = "5250cebd192a41fab47ffde667facda7"
+    -- 슬롯 2: 파워 스트라이크1 [C] — 파워 스트라이크 (공용 전사)
+    property string iconRUID2  = "5c61ff8df1544c05a200e598ea9164ce"
+    -- 슬롯 3: 러시 2 [Z] — 돌진 (DK 계열, 다른 버전)
+    property string iconRUID3  = "977f7994921e4c91aa243a399450fb1e"
+    -- 슬롯 4: 파워 스트라이크2 [F] — 소드 스트라이크 강화
+    property string iconRUID4  = "fc68060762ea4e9b8e7f28ac24aa55c6"
+    -- 슬롯 5: 브레이브 슬래시 [Q] (히어로 3차)
+    property string iconRUID5  = "ba1f6e72109a4fef829f6517b894dea8"
+    -- 슬롯 6: 샤우트 [E] — 이너 샤우트 (Hero 2차)
+    property string iconRUID6  = "dcef9ca314d041fea36eebe3c601db32"
+    -- 슬롯 7: 레이징 블로우 [1]
+    property string iconRUID7  = "644fc39bcc684c209264eb9d9a4cd6f8"
+    -- 슬롯 8: 인사이징 [2]
+    property string iconRUID8  = "69acc0a1482143d5a25f80da945e0f22"
+    -- 슬롯 9: 레이징 블로우+ [3] — 레이징 블로우-보너스 어택 (Hero)
+    property string iconRUID9  = "db34706da3d54f3089bae146668e0008"
+    -- 슬롯 10: 발할라 [4]
+    property string iconRUID10 = "237cc541ba1a402496c3eb45dc9719a6"
+
+    -- ── 쿨다운 오버레이 (Filled / Radial360 / 반투명 검정) ───────
+    property SpriteGUIRendererComponent cdOverlay0  = "a74469b4-72e2-478f-b5f7-ecf18ed7eb34"
+    property SpriteGUIRendererComponent cdOverlay1  = "2c9439ab-c679-4bd0-94c9-11f01cc0a9fa"
+    property SpriteGUIRendererComponent cdOverlay2  = "e98b9e73-3471-4fc9-8574-5f68fb9de105"
+    property SpriteGUIRendererComponent cdOverlay3  = "4a0f0761-51c7-4d33-a4a4-dbd2d21a8294"
+    property SpriteGUIRendererComponent cdOverlay4  = "a0895641-ab31-475b-a05a-314f9c19896e"
+    property SpriteGUIRendererComponent cdOverlay5  = "5f306c2a-4db0-4e73-adf0-b7ed6a52bff8"
+    property SpriteGUIRendererComponent cdOverlay6  = "0beaf3e6-2c17-45d2-b4d5-61e771189c18"
+    property SpriteGUIRendererComponent cdOverlay7  = "542701cc-6384-48dd-8252-9e1e7400408d"
+    property SpriteGUIRendererComponent cdOverlay8  = "7e8d353f-ca92-43c5-8bfc-6404a3714ba6"
+    property SpriteGUIRendererComponent cdOverlay9  = "753268fd-455e-48e0-b460-f404696e18a2"
+    property SpriteGUIRendererComponent cdOverlay10 = "f15905ac-0540-45e3-bc24-5d0cce35fc8b"
+
+    -- ── 쿨다운 남은 시간 텍스트 ─────────────────────────────────
+    property TextComponent cdText0  = "cf144837-dae0-41d2-be04-9a1e272538d2"
+    property TextComponent cdText1  = "49c146d6-221c-4bc6-89f2-a847d2127205"
+    property TextComponent cdText2  = "a43fca90-1e5d-4c91-b5a2-ef2268d268b9"
+    property TextComponent cdText3  = "4aaa0603-2d6b-4d1c-8783-41768f10d33c"
+    property TextComponent cdText4  = "e04f58fe-1403-4f34-a4a8-2aead51958c3"
+    property TextComponent cdText5  = "1e76926c-2143-42e7-bf90-8290d754184c"
+    property TextComponent cdText6  = "a6925fe0-788a-4aa9-bc6e-7ef7ea20181d"
+    property TextComponent cdText7  = "35b53904-09f3-46d1-9d5c-867762593b17"
+    property TextComponent cdText8  = "086d2850-a1fe-4e3e-b8ee-b77efc51a53f"
+    property TextComponent cdText9  = "cdfcd924-0cf7-44fd-86c0-c225cea17c93"
+    property TextComponent cdText10 = "5912093f-7440-4605-9c8c-7c45adbbc5ca"
+
+    -- ── 신궁 스킬 아이콘 RUID (Inspector에서 교체 가능) ──────────
+    property string iconRUID_BM_0  = "39d6e65ad9cb45e5b068946eaae56192"  -- 파이널 어택:활 icon (기본공격)
+    property string iconRUID_BM_1  = "f62b353e3f704eb097e427b7fc97980e"  -- 애로우 블로우 icon [X]
+    property string iconRUID_BM_2  = "ec446184d45e4f1abf065cd03de354bc"  -- 후방이동 icon [C]
+    property string iconRUID_BM_3  = "da2013cbba2e41949bb43ae95d8cff72"  -- 피어싱 샷 icon [Z]
+    property string iconRUID_BM_4  = "19f6cc95361f449796249f4c9b7347d6"  -- 차지드 애로우 icon [F]
+    property string iconRUID_BM_5  = "5163175f38ac4f8db75bfcba1f3ed543"  -- 모탈 블로우 icon [Q]
+    property string iconRUID_BM_6  = "5ac816d6e75b4deabb303f21615a13fb"  -- 볼트 스위프트 icon [E]
+    property string iconRUID_BM_7  = "804c52c890234d69a6a937d7523bb9f8"  -- 스나이핑 icon [1]
+    property string iconRUID_BM_8  = "26e39436667d499aac9e6c3a22368d05"  -- 피어싱 icon [2]
+    property string iconRUID_BM_9  = "26e39436667d499aac9e6c3a22368d05"  -- 스플릿 애로우 icon [3]
+    property string iconRUID_BM_10 = "6351d0b0b23145508c383eac98067c88"  -- 파이널 에임 icon [4]
+
+    property any     timerId        = nil
+    property integer lastJobLevel   = -1
+    property integer localJobClass  = -1  -- 직업 변경 감지용
+
+    -- ── 로비 패널 ─────────────────────────────────────────────────
+    property Entity          panelLobby   = "a6530901-5805-4161-8514-e199b18aac81"
+    property ButtonComponent btnPractice  = "6eb28e48-3e46-4bf8-a431-60b07361ab45"
+    property ButtonComponent btnMulti     = "b4c1fbb7-e1e5-4606-9b92-c22945a7c3fe"
+    property any practiceHandler = nil
+    property any multiHandler    = nil
+
+    @ExecSpace("ClientOnly")
+    method void OnBeginPlay()
+        self:ApplyIconRUIDs(0)
+        self:HideAllOverlays()
+        self.timerId = _TimerService:SetTimerRepeat(self.Tick, 1/20)
+
+        -- 로비 버튼 이벤트 연결
+        if isvalid(self.btnPractice) then
+            self.practiceHandler = self.btnPractice.Entity:ConnectEvent(ButtonClickEvent, function()
+                self:OnClickPractice()
+            end)
+        end
+        if isvalid(self.btnMulti) then
+            self.multiHandler = self.btnMulti.Entity:ConnectEvent(ButtonClickEvent, function()
+                self:OnClickMulti()
+            end)
+        end
+        log("[SkillBarHUD] 시작")
+    end
+
+    @ExecSpace("ClientOnly")
+    method void OnEndPlay()
+        if self.timerId ~= nil then
+            _TimerService:ClearTimer(self.timerId)
+            self.timerId = nil
+        end
+        if self.practiceHandler ~= nil and isvalid(self.btnPractice) then
+            self.btnPractice.Entity:DisconnectEvent(ButtonClickEvent, self.practiceHandler)
+            self.practiceHandler = nil
+        end
+        if self.multiHandler ~= nil and isvalid(self.btnMulti) then
+            self.btnMulti.Entity:DisconnectEvent(ButtonClickEvent, self.multiHandler)
+            self.multiHandler = nil
+        end
+    end
+
+    @ExecSpace("ClientOnly")
+    method void OnClickPractice()
+        -- 맵 선택 팝업 표시 (선택 후 RequestEnterPracticeOnMap 호출)
+        _PracticeMapSelectHUD:Show()
+        log("[SkillBarHUD] 훈련장 맵 선택 팝업 표시")
+    end
+
+    @ExecSpace("ClientOnly")
+    method void OnClickMulti()
+        _GameManagerLogic:RequestEnterMulti()
+        log("[SkillBarHUD] 멀티 매칭 요청")
+    end
+
+    -- 스킬 아이콘 RUID를 각 Icon 스프라이트에 적용 (직업 전환 시 재호출)
+    @ExecSpace("ClientOnly")
+    method void ApplyIconRUIDs(integer jobClass)
+        local icons = {
+            self.icon0,  self.icon1,  self.icon2,  self.icon3,
+            self.icon4,  self.icon5,  self.icon6,  self.icon7,
+            self.icon8,  self.icon9,  self.icon10
+        }
+        local ruids
+        if jobClass == 1 then
+            -- 신궁
+            ruids = {
+                self.iconRUID_BM_0,  self.iconRUID_BM_1,  self.iconRUID_BM_2,
+                self.iconRUID_BM_3,  self.iconRUID_BM_4,  self.iconRUID_BM_5,
+                self.iconRUID_BM_6,  self.iconRUID_BM_7,  self.iconRUID_BM_8,
+                self.iconRUID_BM_9,  self.iconRUID_BM_10
+            }
+        else
+            -- 히어로 (기본)
+            ruids = {
+                self.iconRUID0,  self.iconRUID1,  self.iconRUID2,
+                self.iconRUID3,  self.iconRUID4,  self.iconRUID5,
+                self.iconRUID6,  self.iconRUID7,  self.iconRUID8,
+                self.iconRUID9,  self.iconRUID10
+            }
+        end
+        for i, ic in ipairs(icons) do
+            if isvalid(ic) and ruids[i] ~= "" then
+                ic.ImageRUID = ruids[i]
+            end
+        end
+        log("[SkillBarHUD] 아이콘 RUID 적용 완료 (jobClass=" .. jobClass .. ")")
+    end
+
+    -- 모든 오버레이 초기 숨김
+    @ExecSpace("ClientOnly")
+    method void HideAllOverlays()
+        local overlays = {
+            self.cdOverlay0,  self.cdOverlay1,  self.cdOverlay2,
+            self.cdOverlay3,  self.cdOverlay4,  self.cdOverlay5,
+            self.cdOverlay6,  self.cdOverlay7,  self.cdOverlay8,
+            self.cdOverlay9,  self.cdOverlay10
+        }
+        local texts = {
+            self.cdText0,  self.cdText1,  self.cdText2,
+            self.cdText3,  self.cdText4,  self.cdText5,
+            self.cdText6,  self.cdText7,  self.cdText8,
+            self.cdText9,  self.cdText10
+        }
+        for i = 1, 11 do
+            self:HideOverlay(overlays[i], texts[i])
+        end
+    end
+
+    -- 20fps 폴링: FighterComponent에서 JobLevel·SkillCDs 읽어 HUD 갱신
+    @ExecSpace("ClientOnly")
+    method void Tick()
+        local player = _UserService.LocalPlayer
+        if not isvalid(player) then return end
+
+        local fcComp = player:GetComponent("script.FighterComponent")
+        if fcComp == nil then return end
+        ---@type FighterComponent
+        local fc = fcComp
+
+        -- 로비 모드: MatchMode == "none" → 로비 패널 표시, 스킬바 갱신 건너뜀
+        if fc.MatchMode == "none" then
+            if isvalid(self.panelLobby) then
+                self.panelLobby.Enable = true
+            end
+            return
+        else
+            if isvalid(self.panelLobby) then
+                self.panelLobby.Enable = false
+            end
+        end
+
+        -- 직업 변경 시 아이콘 세트 교체
+        if fc.JobClass ~= self.localJobClass then
+            self.localJobClass = fc.JobClass
+            self:ApplyIconRUIDs(fc.JobClass)
+        end
+
+        -- JobLevel 변경 시 아이콘 해금/잠금 갱신
+        if fc.JobLevel ~= self.lastJobLevel then
+            self.lastJobLevel = fc.JobLevel
+            self:UpdateIconColors(fc.JobLevel)
+        end
+
+        -- 슬롯 0 (기본공격 [Ctrl]): 쿨다운 없음
+        self:HideOverlay(self.cdOverlay0, self.cdText0)
+
+        -- 슬롯 1-10 쿨다운 (SkillCDs[i] = Skill{i}Cooldown)
+        local overlays = {
+            self.cdOverlay1, self.cdOverlay2, self.cdOverlay3,
+            self.cdOverlay4, self.cdOverlay5, self.cdOverlay6,
+            self.cdOverlay7, self.cdOverlay8, self.cdOverlay9,
+            self.cdOverlay10
+        }
+        local texts = {
+            self.cdText1, self.cdText2, self.cdText3,
+            self.cdText4, self.cdText5, self.cdText6,
+            self.cdText7, self.cdText8, self.cdText9,
+            self.cdText10
+        }
+        for i = 1, 10 do
+            local cd    = fc.SkillCDs[i]
+            local maxCD = fc.SkillMaxCDs[i]
+            self:UpdateCD(overlays[i], texts[i], cd or 0, maxCD or 1)
+        end
+    end
+
+    -- 쿨다운 오버레이 갱신 (Radial360 FillAmount)
+    @ExecSpace("ClientOnly")
+    method void UpdateCD(
+        SpriteGUIRendererComponent overlay,
+        TextComponent txt,
+        number cd,
+        number maxCD
+    )
+        if not isvalid(overlay) or not isvalid(txt) then return end
+        if cd <= 0 or maxCD <= 0 then
+            self:HideOverlay(overlay, txt)
+            return
+        end
+        local ratio = math.max(0, math.min(1, cd / maxCD))
+        overlay.Entity.Enable = true
+        overlay.FillAmount = ratio
+        txt.Entity.Enable = true
+        txt.Text = tostring(math.ceil(cd))
+    end
+
+    -- 오버레이·텍스트 숨김
+    @ExecSpace("ClientOnly")
+    method void HideOverlay(SpriteGUIRendererComponent overlay, TextComponent txt)
+        if not isvalid(overlay) or not isvalid(txt) then return end
+        overlay.Entity.Enable = false
+        txt.Entity.Enable = false
+    end
+
+    -- 아이콘 해금/잠금 색상 처리
+    -- icon0: 기본공격 (항상 해금)
+    -- icon1·2: 1차 스킬 (JobLevel ≥ 1)
+    -- icon3·4: 2차 스킬 (JobLevel ≥ 2)
+    -- icon5·6: 3차 스킬 (JobLevel ≥ 3)
+    -- icon7·8: 4차 스킬 (JobLevel ≥ 4)
+    -- icon9·10: 5차 스킬 (JobLevel ≥ 5)
+    @ExecSpace("ClientOnly")
+    method void UpdateIconColors(integer jl)
+        local unlockLevels = {0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5}
+        local icons = {
+            self.icon0,  self.icon1,  self.icon2,
+            self.icon3,  self.icon4,  self.icon5,
+            self.icon6,  self.icon7,  self.icon8,
+            self.icon9,  self.icon10
+        }
+        for i, requiredLv in ipairs(unlockLevels) do
+            local ic = icons[i]
+            if isvalid(ic) then
+                if jl >= requiredLv then
+                    ic.Color = Color(1, 1, 1, 1)
+                else
+                    ic.Color = Color(0.3, 0.3, 0.3, 1)
+                end
+            end
+        end
+        log("[SkillBarHUD] JobLevel=" .. jl .. " 아이콘 색상 갱신")
+    end
+end

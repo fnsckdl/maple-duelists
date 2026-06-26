@@ -1,0 +1,171 @@
+@Component
+script FighterInput extends Component
+    property any keyDownHandler = nil
+    property any keyUpHandler   = nil
+
+    @ExecSpace("ClientOnly")
+    method void OnBeginPlay()
+        -- 로컬 플레이어만 입력 등록
+        if self.Entity ~= _UserService.LocalPlayer then return end
+
+        self.keyDownHandler = _InputService:ConnectEvent(KeyDownEvent, self.OnKeyDown)
+        self.keyUpHandler   = _InputService:ConnectEvent(KeyUpEvent,   self.OnKeyUp)
+
+        local ctrl = self.Entity.PlayerControllerComponent
+        if isvalid(ctrl) then
+            ctrl:SetActionKey(KeyboardKey.LeftAlt,  "Jump")
+            ctrl:SetActionKey(KeyboardKey.RightAlt, "Jump")
+        end
+
+        log("[FighterInput] 입력 등록 완료 (로컬 플레이어)")
+    end
+
+    @ExecSpace("ClientOnly")
+    method void OnEndPlay()
+        if self.Entity ~= _UserService.LocalPlayer then return end
+
+        if self.keyDownHandler ~= nil then
+            _InputService:DisconnectEvent(KeyDownEvent, self.keyDownHandler)
+            self.keyDownHandler = nil
+        end
+        if self.keyUpHandler ~= nil then
+            _InputService:DisconnectEvent(KeyUpEvent, self.keyUpHandler)
+            self.keyUpHandler = nil
+        end
+    end
+
+    -- ─── 키 매핑 (직업 공통) ─────────────────────────────────
+    --  Alt         : 점프 (PlayerController 액션키)
+    --  Shift       : 가드 ON/OFF
+    --  Ctrl        : 슬롯 0  — 기본공격
+    --  X           : 슬롯 1  — 1차 스킬 A
+    --  C           : 슬롯 2  — 1차 스킬 B
+    --  Z           : 슬롯 3  — 2차 스킬 A
+    --  F           : 슬롯 4  — 2차 스킬 B
+    --  Q           : 슬롯 5  — 3차 스킬 A  (히어로: 브레이브 슬래시 / 신궁: 모탈 블로우)
+    --  E           : 슬롯 6  — 3차 스킬 B  (히어로: 샤우트 / 신궁: 볼트 스위프)
+    --  1           : 슬롯 7  — 4차 스킬 A
+    --  2           : 슬롯 8  — 4차 스킬 B
+    --  3           : 슬롯 9  — 5차 스킬 A
+    --  4           : 슬롯 10 — 5차 스킬 B  (히어로: 발할라 / 신궁: 파이널 에임 버프)
+    --  V           : 오리진 스킬 (게이지 100% 필요)
+    --  Tab         : 라운드 강제 스킵 (테스트 전용)
+
+    method void OnKeyDown(KeyDownEvent event)
+        if self.Entity ~= _UserService.LocalPlayer then return end
+
+        local k = event.key
+        if     k == KeyboardKey.LeftControl  or k == KeyboardKey.RightControl then
+            self:RequestBasicAttack()
+        elseif k == KeyboardKey.LeftShift    or k == KeyboardKey.RightShift   then
+            self:RequestSetGuard(true)
+        elseif k == KeyboardKey.V            then self:RequestOrigin()
+        elseif k == KeyboardKey.Tab          then self:RequestTabAction()
+        elseif k == KeyboardKey.X            then self:RequestSkillSlot(1)
+        elseif k == KeyboardKey.C            then self:RequestSkillSlot(2)
+        elseif k == KeyboardKey.Z            then self:RequestSkillSlot(3)
+        elseif k == KeyboardKey.F            then self:RequestSkillSlot(4)
+        elseif k == KeyboardKey.Q            then self:RequestSkillSlot(5)
+        elseif k == KeyboardKey.E            then self:RequestSkillSlot(6)
+        elseif k == KeyboardKey.Alpha1       then self:RequestSkillSlot(7)
+        elseif k == KeyboardKey.Alpha2       then self:RequestSkillSlot(8)
+        elseif k == KeyboardKey.Alpha3       then self:RequestSkillSlot(9)
+        elseif k == KeyboardKey.Alpha4       then self:RequestSkillSlot(10)
+        end
+    end
+
+    method void OnKeyUp(KeyUpEvent event)
+        if self.Entity ~= _UserService.LocalPlayer then return end
+
+        local k = event.key
+        if k == KeyboardKey.LeftShift or k == KeyboardKey.RightShift then
+            self:RequestSetGuard(false)
+        end
+    end
+
+    -- ─── 서버 RPC ────────────────────────────────────
+
+    @ExecSpace("Server")
+    method void RequestBasicAttack()
+        if not self:CanAct() then return end
+        local sm = self.Entity:GetComponent("script.SkillManager")
+        if sm == nil then return end
+        ---@type SkillManager
+        local skillMgr = sm
+        skillMgr:ExecuteBasicAttack()
+    end
+
+    @ExecSpace("Server")
+    method void RequestSetGuard(boolean active)
+        local fc = self.Entity:GetComponent("script.FighterComponent")
+        if fc == nil then return end
+        ---@type FighterComponent
+        local fighter = fc
+        if fighter:IsAlive() and not fighter.IsStunned then
+            fighter.IsGuarding = active
+        end
+    end
+
+    @ExecSpace("Server")
+    method void RequestSkillSlot(integer slot)
+        if not self:CanAct() then return end
+        local fc = self.Entity:GetComponent("script.FighterComponent")
+        if fc == nil then return end
+        ---@type FighterComponent
+        local fighter = fc
+        -- 슬롯 1-2=1차, 3-4=2차, 5-6=3차, 7-8=4차, 9-10=5차
+        local required = (slot + 1) // 2
+        if fighter.JobLevel < required then return end
+        local cd = fighter.SkillCDs[slot]
+        if cd ~= nil and cd > 0 then return end
+        local sm = self.Entity:GetComponent("script.SkillManager")
+        if sm == nil then return end
+        ---@type SkillManager
+        local skillMgr = sm
+        skillMgr:ExecuteSkillSlot(slot)
+    end
+
+    @ExecSpace("Server")
+    method void RequestOrigin()
+        if not self:CanAct() then return end
+        local fc = self.Entity:GetComponent("script.FighterComponent")
+        if fc ~= nil then
+            ---@type FighterComponent
+            local fighter = fc
+            if not fighter:TryUseOrigin() then return end
+        end
+        local sm = self.Entity:GetComponent("script.SkillManager")
+        if sm == nil then return end
+        ---@type SkillManager
+        local skillMgr = sm
+        skillMgr:ExecuteOrigin()
+    end
+
+    -- Tab 키: 훈련장 → 더미 HP 리셋 / 멀티 → 라운드 강제 스킵
+    @ExecSpace("Server")
+    method void RequestTabAction()
+        _GameManagerLogic:HandleTabAction(senderUserId)
+    end
+
+    @ExecSpace("Server")
+    method void RequestSetJobClass(integer jobClass)
+        -- 유효한 직업 번호(0=히어로, 1=신궁)만 허용
+        if jobClass < 0 or jobClass > 1 then return end
+        local fc = self.Entity:GetComponent("script.FighterComponent")
+        if fc == nil then return end
+        ---@type FighterComponent
+        local fighter = fc
+        fighter.JobClass = jobClass
+        log("[FighterInput] JobClass 설정: " .. tostring(jobClass))
+    end
+
+    -- ─── 내부 유틸 ────────────────────────────────────
+
+    method boolean CanAct()
+        local fc = self.Entity:GetComponent("script.FighterComponent")
+        if fc == nil then return false end
+        ---@type FighterComponent
+        local fighter = fc
+        return fighter:CanAct()
+    end
+end
