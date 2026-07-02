@@ -184,6 +184,9 @@ script MuruBossBot extends Component
 
         if dist <= hitRange then
             tf:TakeDamage(dmg, false)
+            -- TakeDamage가 플레이어를 죽여 무릉 세션을 끝내면 그 안에서 보스(self.Entity)가
+            -- 파괴될 수 있다 — 이후 self 참조가 깨지므로 여기서 즉시 중단한다.
+            if not isvalid(self.Entity) then return end
             log("[MuruBossBot] 공격 적중 — Job=" .. tostring(self.BossJobClass) .. " dmg=" .. tostring(dmg) .. " dist=" .. tostring(dist))
         end
 

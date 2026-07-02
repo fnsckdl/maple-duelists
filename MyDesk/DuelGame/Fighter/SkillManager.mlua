@@ -101,7 +101,7 @@ script SkillManager extends Component
     property string vfxRUID_TF_SonicBlow     = "96c839fe34124843ad494094d1e7d2db"
     property string vfxRUID_TF_DoubleJump    = "1ebb7ff85f064bf985dea98d8acf5cfd"
     property string sfxRUID_TF_DoubleJump    = "882f31f81cb94e6ba2973c3fe87272d3"
-    property string vfxRUID_TF_ShurikenFly   = "2b6de5c42f9e4741b9cd705eb710b5f7"
+    property string vfxRUID_TF_ShurikenFly   = "1615c0292d0a4660a9472f122291c9a0"
     property string vfxRUID_TF_Assaulter     = ""
     property string sfxRUID_TF_Assaulter     = ""
     property string vfxRUID_TF_Assassinate   = ""
@@ -710,33 +710,33 @@ script SkillManager extends Component
 
     @ExecSpace("Multicast")
     method void VFX_PSHit(integer dir)
-        self:PlayVFX(self.vfxRUID_PSHit, self.sfxRUID_PSHit, dir, 0.8, 0.2, 1.3, 1.2, 10, Color(1, 0.6, 0.1, 1))
+        self:PlayVFX(self.vfxRUID_PSHit, self.sfxRUID_PSHit, dir, 0.8, 0.2, 1.3, 1.2, 10, Color(1, 1, 1, 1))
     end
 
     @ExecSpace("Multicast")
     method void VFX_BraveSlash(integer dir, integer hit)
         -- hit(1~3): 전방 오프셋 점진 확장
-        self:PlayVFX(self.vfxRUID_BraveSlash, self.sfxRUID_BraveSlash, dir, 0.5 + hit * 0.2, 0.3, 1.1, 1.0, 10, Color(0.8, 1, 0.7, 1))
+        self:PlayVFX(self.vfxRUID_BraveSlash, self.sfxRUID_BraveSlash, dir, 0.5 + hit * 0.2, 0.3, 1.1, 1.0, 10, Color(1, 1, 1, 1))
     end
 
     @ExecSpace("Multicast")
     method void VFX_Shout(integer dir)
-        self:PlayVFX(self.vfxRUID_Shout, self.sfxRUID_Shout, dir, 0.0, 0.0, 2.0, 2.0, 8, Color(0.6, 0.9, 1, 1))
+        self:PlayVFX(self.vfxRUID_Shout, self.sfxRUID_Shout, dir, 0.0, 0.0, 2.0, 2.0, 8, Color(1, 1, 1, 1))
     end
 
     @ExecSpace("Multicast")
     method void VFX_RagingBlowHit(integer dir)
-        self:PlayVFX(self.vfxRUID_RagingBlow, self.sfxRUID_RagingBlow, dir, 0.8, 0.3, 1.0, 1.0, 10, Color(1, 0.4, 0.4, 1))
+        self:PlayVFX(self.vfxRUID_RagingBlow, self.sfxRUID_RagingBlow, dir, 0.8, 0.3, 1.0, 1.0, 10, Color(1, 1, 1, 1))
     end
 
     @ExecSpace("Multicast")
     method void VFX_Insizing(integer dir)
-        self:PlayVFX(self.vfxRUID_Insizing, self.sfxRUID_Insizing, dir, 0.7, 0.3, 1.0, 1.0, 10, Color(1, 0.2, 0.2, 1))
+        self:PlayVFX(self.vfxRUID_Insizing, self.sfxRUID_Insizing, dir, 0.7, 0.3, 1.0, 1.0, 10, Color(1, 1, 1, 1))
     end
 
     @ExecSpace("Multicast")
     method void VFX_RagingBlowPlus(integer dir)
-        self:PlayVFX(self.vfxRUID_RagingBlowPlus, self.sfxRUID_RagingBlow, dir, 1.0, 0.3, 1.5, 1.5, 10, Color(1, 0.5, 0.5, 1))
+        self:PlayVFX(self.vfxRUID_RagingBlowPlus, self.sfxRUID_RagingBlow, dir, 1.0, 0.3, 1.5, 1.5, 10, Color(1, 1, 1, 1))
     end
 
     -- ── 발할라: 루프 부착 + 버스트 (커스텀 유지 — PlayVFX는 단발 전용) ──
@@ -748,7 +748,7 @@ script SkillManager extends Component
             else _ParticleService:RemoveParticle(self.valhallaSerial) end
             self.valhallaSerial = -1
         end
-        local aOpts = { SortingLayer = "Character", OrderInLayer = 3, Color = Color(0.7, 0.5, 1, 0.9) }
+        local aOpts = { SortingLayer = "Character", OrderInLayer = 3, Color = Color(1, 1, 1, 0.9) }
         if self.vfxRUID_Valhalla ~= "" then
             self.valhallaSerial   = _EffectService:PlayEffectAttached(self.vfxRUID_Valhalla, self.Entity, Vector3(0,0,0), 0, Vector3(1.2,1.2,1), true, aOpts)
             self.valhallaIsEffect = true
@@ -756,7 +756,7 @@ script SkillManager extends Component
             self.valhallaSerial   = _ParticleService:PlayBasicParticleAttached(BasicParticleType.Aura, self.Entity, Vector3(0,0,0), 0, Vector3(1.2,1.2,1), true, aOpts)
             self.valhallaIsEffect = false
         end
-        local bOpts = { SortingLayer = "Character", OrderInLayer = 5, Color = Color(0.8, 0.6, 1, 1) }
+        local bOpts = { SortingLayer = "Character", OrderInLayer = 5, Color = Color(1, 1, 1, 1) }
         if self.vfxRUID_ValhallaBurst ~= "" then
             _EffectService:PlayEffect(self.vfxRUID_ValhallaBurst, self.Entity, pos, 0, Vector3(1.2,1.2,1), false, bOpts)
         else
@@ -778,13 +778,13 @@ script SkillManager extends Component
         local pos  = self.Entity.TransformComponent.WorldPosition
         local cs   = self.Entity.TransformComponent.Scale
         local sc   = math.abs(cs.x)
-        local opts = { SortingLayer = "Character", OrderInLayer = 20, Color = Color(1, 0.9, 0.3, 1), FlipX = (dir < 0) }
+        local opts = { SortingLayer = "Character", OrderInLayer = 20, Color = Color(1, 1, 1, 1), FlipX = (dir < 0) }
         if self.vfxRUID_SpiritCaliber ~= "" then
             _EffectService:PlayEffect(self.vfxRUID_SpiritCaliber, self.Entity, pos, 0, Vector3(3*sc, 3*sc, 1), false, opts)
         else
             _ParticleService:PlayBasicParticle(BasicParticleType.EnergyExplosion, self.Entity, pos, 0, Vector3(3*sc, 3*sc, 1), false, opts)
             _ParticleService:PlayBasicParticle(BasicParticleType.PillarBurst,     self.Entity, pos, 0, Vector3(2.5*sc, 2.5*sc, 1), false, opts)
-            local sOpts = { SortingLayer = "Character", OrderInLayer = 18, Color = Color(1, 0.8, 0.2, 1) }
+            local sOpts = { SortingLayer = "Character", OrderInLayer = 18, Color = Color(1, 1, 1, 1) }
             local xs = { -3.0, -1.5, 0.0, 1.5, 3.0 }
             for i = 1, 5 do
                 local bp = Vector3(pos.x + xs[i] * sc, pos.y + math.fmod(i * 0.6, 1.5), pos.z)
@@ -805,22 +805,22 @@ script SkillManager extends Component
 
     @ExecSpace("Multicast")
     method void VFX_BM_ArrowBlow(integer dir)
-        self:PlayVFX(self.vfxRUID_BM_ArrowBlow, self.sfxRUID_BM_ArrowBlow, dir, 1.8, 0.3, 1.2, 0.6, 10, Color(0.9, 0.9, 0.6, 1))
+        self:PlayVFX(self.vfxRUID_BM_ArrowBlow, self.sfxRUID_BM_ArrowBlow, dir, 1.8, 0.3, 1.2, 0.6, 10, Color(1, 1, 1, 1))
     end
 
     @ExecSpace("Multicast")
     method void VFX_BM_PiercingShot(integer dir)
-        self:PlayVFX(self.vfxRUID_BM_PiercingShot, self.sfxRUID_BM_PiercingShot, dir, 2.5, 0.3, 1.5, 0.6, 10, Color(0.5, 0.9, 1, 1))
+        self:PlayVFX(self.vfxRUID_BM_PiercingShot, self.sfxRUID_BM_PiercingShot, dir, 2.5, 0.3, 1.5, 0.6, 10, Color(1, 1, 1, 1))
     end
 
     @ExecSpace("Multicast")
     method void VFX_BM_IronArrow(integer dir)
-        self:PlayVFX(self.vfxRUID_BM_IronArrow, self.sfxRUID_BM_IronArrow, dir, 2.2, 0.3, 1.3, 0.6, 10, Color(0.6, 0.8, 1, 1))
+        self:PlayVFX(self.vfxRUID_BM_IronArrow, self.sfxRUID_BM_IronArrow, dir, 2.2, 0.3, 1.3, 0.6, 10, Color(1, 1, 1, 1))
     end
 
     @ExecSpace("Multicast")
     method void VFX_BM_MortalBlow(integer dir)
-        self:PlayVFX(self.vfxRUID_BM_MortalBlow, self.sfxRUID_BM_MortalBlow, dir, 2.2, 0.3, 1.2, 0.6, 10, Color(0.6, 0.2, 0.9, 1))
+        self:PlayVFX(self.vfxRUID_BM_MortalBlow, self.sfxRUID_BM_MortalBlow, dir, 2.2, 0.3, 1.2, 0.6, 10, Color(1, 1, 1, 1))
     end
 
     @ExecSpace("Multicast")
@@ -832,7 +832,7 @@ script SkillManager extends Component
         -- 1) 화살 투사체 (플레이어 옆에서 발사)
         if self.vfxRUID_BM_SniperBall ~= "" then
             opts.OrderInLayer = 15
-            opts.Color = Color(1, 1, 0.6, 1)
+            opts.Color = Color(1, 1, 1, 1)
             _EffectService:PlayEffect(self.vfxRUID_BM_SniperBall, self.Entity,
                 Vector3(base.x + dir * 0.3 * sc, base.y + 0.3, base.z),
                 0, Vector3(0.8*sc, 0.4*sc, 1), false, opts)
@@ -840,7 +840,7 @@ script SkillManager extends Component
         -- 2) 스킬 발동 이펙트 (전방 중거리)
         if self.vfxRUID_BM_SniperEffect ~= "" then
             opts.OrderInLayer = 18
-            opts.Color = Color(1, 0.8, 0.3, 1)
+            opts.Color = Color(1, 1, 1, 1)
             _EffectService:PlayEffect(self.vfxRUID_BM_SniperEffect, self.Entity,
                 Vector3(base.x + dir * 2.0 * sc, base.y + 0.3, base.z),
                 0, Vector3(1.2*sc, 0.8*sc, 1), false, opts)
@@ -848,7 +848,7 @@ script SkillManager extends Component
         -- 3) 타격 이펙트 (전방 원거리)
         if self.vfxRUID_BM_SniperHit ~= "" then
             opts.OrderInLayer = 16
-            opts.Color = Color(1, 0.5, 0, 1)
+            opts.Color = Color(1, 1, 1, 1)
             _EffectService:PlayEffect(self.vfxRUID_BM_SniperHit, self.Entity,
                 Vector3(base.x + dir * 3.5 * sc, base.y + 0.3, base.z),
                 0, Vector3(1.0*sc, 0.8*sc, 1), false, opts)
@@ -860,23 +860,19 @@ script SkillManager extends Component
     -- ── 피어싱 폭풍: 플레이어 위치에서 발생, 전방으로 뻗어나감 ──
     @ExecSpace("Multicast")
     method void VFX_BM_PiercingStorm(integer dir)
-        self:PlayVFX(self.vfxRUID_BM_Piercing, self.sfxRUID_BM_Piercing, dir, 0.0, 0.3, 2.0, 1.2, 12, Color(0.6, 0.9, 1, 1))
+        self:PlayVFX(self.vfxRUID_BM_Piercing, self.sfxRUID_BM_Piercing, dir, 0.0, 0.3, 2.0, 1.2, 12, Color(1, 1, 1, 1))
     end
 
     -- ── 후방이동: 뒤 방향 대시 이펙트 ──────────────────────────
     @ExecSpace("Multicast")
     method void VFX_BM_BackStep(integer dir)
-        self:PlayVFX(self.vfxRUID_BM_BackStep, self.sfxRUID_BM_BackStep, -dir, 0.5, 0.2, 1.2, 1.0, 8, Color(0.5, 0.8, 1, 1))
+        self:PlayVFX(self.vfxRUID_BM_BackStep, self.sfxRUID_BM_BackStep, -dir, 0.5, 0.2, 1.2, 1.0, 8, Color(1, 1, 1, 1))
     end
 
     -- ── 화살 발사: 화살 엔티티에 부착 (커스텀 — Entity 파라미터) ──
     @ExecSpace("Multicast")
     method void VFX_BM_ArrowLaunch(integer dir, Entity arrowEnt)
-        if not isvalid(arrowEnt) then return end
-        local opts = { SortingLayer = "Character", OrderInLayer = 8, FlipX = (dir < 0) }
-        if self.vfxRUID_BM_ArrowBall ~= "" then
-            _EffectService:PlayEffectAttached(self.vfxRUID_BM_ArrowBall, arrowEnt, Vector3(0,0,0), 0, Vector3(0.6,0.6,1), true, opts)
-        end
+        -- 화살 스프라이트 자체가 보이도록 고쳐서, 겹쳐 보이던 부착 이펙트(ArrowBall)는 제거했다.
         if self.sfxRUID_BM_BasicSwing ~= "" then _SoundService:PlaySound(self.sfxRUID_BM_BasicSwing, 0.5) end
     end
 
@@ -886,7 +882,7 @@ script SkillManager extends Component
         local pos  = self.Entity.TransformComponent.WorldPosition
         local cs   = self.Entity.TransformComponent.Scale
         local sc   = math.abs(cs.x)
-        local opts = { SortingLayer = "Character", OrderInLayer = 10, FlipX = (dir < 0), Color = Color(0.7, 1, 0.6, 1) }
+        local opts = { SortingLayer = "Character", OrderInLayer = 10, FlipX = (dir < 0), Color = Color(1, 1, 1, 1) }
         -- 스윕 전체 이펙트 (origin 1회)
         if self.vfxRUID_BM_BoltSweep ~= "" then
             _EffectService:PlayEffect(self.vfxRUID_BM_BoltSweep, self.Entity, Vector3(pos.x + dir*1.2*sc, pos.y + 0.8, pos.z), 0, Vector3(0.9*sc, 0.9*sc, 1), false, opts)
@@ -913,7 +909,7 @@ script SkillManager extends Component
         local pos  = self.Entity.TransformComponent.WorldPosition
         local cs   = self.Entity.TransformComponent.Scale
         local sc   = math.abs(cs.x)
-        local opts = { SortingLayer = "Character", OrderInLayer = 15, Color = Color(1, 0.2, 0.2, 0.8) }
+        local opts = { SortingLayer = "Character", OrderInLayer = 15, Color = Color(1, 1, 1, 0.8) }
         _ParticleService:PlayBasicParticle(BasicParticleType.LightningStrikeSharp, self.Entity,
             Vector3(pos.x + dir * 4*sc, pos.y + 0.3, pos.z), 90, Vector3(0.2, 6*sc, 1), false, opts)
     end
@@ -925,7 +921,7 @@ script SkillManager extends Component
         local cs    = self.Entity.TransformComponent.Scale
         local sc    = math.abs(cs.x)
         local split = Vector3(pos.x + dir*2.5*sc, pos.y + 0.3, pos.z)
-        local opts  = { SortingLayer = "Character", OrderInLayer = 12, Color = Color(0.9, 1, 0.5, 1) }
+        local opts  = { SortingLayer = "Character", OrderInLayer = 12, Color = Color(1, 1, 1, 1) }
         if self.vfxRUID_BM_SplitArrow ~= "" then
             _EffectService:PlayEffect(self.vfxRUID_BM_SplitArrow, self.Entity, split, 0, Vector3(0.75*sc,0.75*sc,1), false, opts)
         else
@@ -943,7 +939,7 @@ script SkillManager extends Component
             _EffectService:RemoveEffect(self.finalAimSerial)
             self.finalAimSerial = -1
         end
-        local aOpts = { SortingLayer = "Character", OrderInLayer = 3, Color = Color(0.4, 0.9, 1, 0.85) }
+        local aOpts = { SortingLayer = "Character", OrderInLayer = 3, Color = Color(1, 1, 1, 0.85) }
         self.finalAimSerial = _EffectService:PlayEffectAttached(self.vfxRUID_BM_FinalAim, self.Entity, Vector3(0,0,0), 0, Vector3(0.5,0.5,1), true, aOpts)
         if self.sfxRUID_BM_FinalAim ~= "" then _SoundService:PlaySound(self.sfxRUID_BM_FinalAim, 0.5) end
         local s = self.finalAimSerial
@@ -959,11 +955,11 @@ script SkillManager extends Component
         local cs     = self.Entity.TransformComponent.Scale
         local sc     = math.abs(cs.x)
         local hitPos = Vector3(pos.x + dir * 6*sc, pos.y + 0.3, pos.z)
-        local opts   = { SortingLayer = "Character", OrderInLayer = 20, FlipX = (dir < 0), Color = Color(0.3, 0.9, 1, 1) }
+        local opts   = { SortingLayer = "Character", OrderInLayer = 20, FlipX = (dir < 0), Color = Color(1, 1, 1, 1) }
         if self.vfxRUID_FAOriginHit ~= "" then
             _EffectService:PlayEffect(self.vfxRUID_FAOriginHit, self.Entity, hitPos, 0, Vector3(1.5*sc, 0.5*sc, 1), false, opts)
         end
-        local cOpts = { SortingLayer = "Character", OrderInLayer = 18, Color = Color(0.2, 0.8, 1, 1) }
+        local cOpts = { SortingLayer = "Character", OrderInLayer = 18, Color = Color(1, 1, 1, 1) }
         _ParticleService:PlayBasicParticle(BasicParticleType.LightningBlast,           self.Entity, pos,    0, Vector3(2*sc, 2*sc, 1),   false, cOpts)
         _ParticleService:PlayBasicParticle(BasicParticleType.LightningStrikeSharpTall, self.Entity, hitPos, 0, Vector3(0.3*sc, 5*sc, 1), false, cOpts)
         if self.sfxRUID_FAOrigin ~= "" then _SoundService:PlaySound(self.sfxRUID_FAOrigin, 0.5) end
@@ -1018,17 +1014,9 @@ script SkillManager extends Component
         log("[SkillMgr] 표창 발사 dir=" .. tostring(dir))
     end
 
-    -- 표창 비행 VFX: 엔티티에 회전 애니메이션 부착
+    -- 표창 비행 VFX: 표창 스프라이트 자체가 보이므로 겹쳐 보이던 부착 이펙트는 제거했다.
     @ExecSpace("Multicast")
     method void VFX_TF_ShurikenLaunch(integer dir, Entity shurikenEnt)
-        if not isvalid(shurikenEnt) then return end
-        local opts = { SortingLayer = "Character", OrderInLayer = 7, FlipX = (dir < 0) }
-        if self.vfxRUID_TF_ShurikenFly ~= "" then
-            _EffectService:PlayEffectAttached(
-                self.vfxRUID_TF_ShurikenFly, shurikenEnt,
-                Vector3(0, 0, 0), 0, Vector3(0.4, 0.4, 1), true, opts
-            )
-        end
     end
 
     @ExecSpace("ServerOnly")
@@ -1039,7 +1027,7 @@ script SkillManager extends Component
         -- V=11(소닉블로우)
         if     slot == 1  then self:SetSkillCD(1,  3.0);  self:TF_Stele()
         elseif slot == 2  then self:SetSkillCD(2,  8.0);  self:TF_DarkSight()
-        elseif slot == 3  then                             self:TF_SavageBlow()
+        elseif slot == 3  then self:SetSkillCD(3,  5.0);  self:TF_SavageBlow()
         elseif slot == 4  then self:SetSkillCD(4, 12.0);  self:TF_Heist()
         elseif slot == 5  then self:SetSkillCD(5,  6.0);  self:TF_Assaulter()
         elseif slot == 6  then self:SetSkillCD(6,  6.0);  self:TF_MesoExplosion()
@@ -1051,7 +1039,7 @@ script SkillManager extends Component
         end
     end
 
-    -- [X] 새비지 블로우: 초근접 6연타 쿨타임 없음
+    -- [Z] 새비지 블로우: 초근접 6연타 (CD 5.0s)
     @ExecSpace("ServerOnly")
     method void TF_SavageBlow()
         local dir = self:LookDir()
@@ -1570,13 +1558,13 @@ script SkillManager extends Component
     @ExecSpace("Multicast")
     method void VFX_TF_BasicHit(integer dir)
         -- 기본공격 타격 스파크
-        self:PlayVFX(self.vfxRUID_TF_SavageBlow, "", dir, 0.5, 0.3, 0.7, 0.7, 10, Color(0.2, 0.2, 0.2, 1))
+        self:PlayVFX(self.vfxRUID_TF_SavageBlow, "", dir, 0.5, 0.3, 0.7, 0.7, 10, Color(1, 1, 1, 1))
     end
 
     @ExecSpace("Multicast")
     method void VFX_TF_Assaulter(integer dir)
         -- 돌진 먼지 이펙트
-        self:PlayVFX(self.vfxRUID_TF_Assaulter, self.sfxRUID_TF_Assaulter, dir, 0.5, 0.3, 1.3, 0.8, 10, Color(0.1, 0.1, 0.1, 1))
+        self:PlayVFX(self.vfxRUID_TF_Assaulter, self.sfxRUID_TF_Assaulter, dir, 0.5, 0.3, 1.3, 0.8, 10, Color(1, 1, 1, 1))
     end
 
     @ExecSpace("Multicast")
@@ -1587,7 +1575,7 @@ script SkillManager extends Component
     @ExecSpace("Multicast")
     method void VFX_TF_DoubleJump(integer dir)
         -- 더블점프: 후방 잔상 이펙트
-        self:PlayVFX(self.vfxRUID_TF_DoubleJump, self.sfxRUID_TF_DoubleJump, dir, -0.3, -0.2, 1.2, 0.6, 5, Color(0.3, 0.3, 0.3, 0.8))
+        self:PlayVFX(self.vfxRUID_TF_DoubleJump, self.sfxRUID_TF_DoubleJump, dir, -0.3, -0.2, 1.2, 0.6, 5, Color(1, 1, 1, 0.8))
     end
 
     @ExecSpace("Multicast")
@@ -1633,18 +1621,18 @@ script SkillManager extends Component
     @ExecSpace("Multicast")
     method void VFX_IL_LightningBolt(integer dir)
         -- 단일 번개
-        self:PlayVFX(self.vfxRUID_IL_LightningBolt, self.sfxRUID_IL_Lightning, dir, 2.0, 0.3, 1.2, 0.6, 10, Color(1.0, 1.0, 0.3, 1))
+        self:PlayVFX(self.vfxRUID_IL_LightningBolt, self.sfxRUID_IL_Lightning, dir, 2.0, 0.3, 1.2, 0.6, 10, Color(1, 1, 1, 1))
     end
 
     @ExecSpace("Multicast")
     method void VFX_IL_ChainHit(integer dir, integer bounce)
-        self:PlayVFX(self.vfxRUID_IL_ChainLightning, self.sfxRUID_IL_Lightning, dir, 1.5 + bounce * 0.5, 0.3, 0.8, 0.5, 10, Color(0.8, 1.0, 0.3, 1))
+        self:PlayVFX(self.vfxRUID_IL_ChainLightning, self.sfxRUID_IL_Lightning, dir, 1.5 + bounce * 0.5, 0.3, 0.8, 0.5, 10, Color(1, 1, 1, 1))
     end
 
     @ExecSpace("Multicast")
     method void VFX_IL_IceStrike(integer dir)
         -- 얼음 파편 광역 이펙트
-        self:PlayVFX(self.vfxRUID_IL_IceStrike, self.sfxRUID_IL_Ice, dir, 0.5, 0.5, 2.0, 1.8, 8, Color(0.4, 0.8, 1, 1))
+        self:PlayVFX(self.vfxRUID_IL_IceStrike, self.sfxRUID_IL_Ice, dir, 0.5, 0.5, 2.0, 1.8, 8, Color(1, 1, 1, 1))
     end
 
     @ExecSpace("Multicast")
@@ -1653,7 +1641,7 @@ script SkillManager extends Component
         local pos  = self.Entity.TransformComponent.WorldPosition
         local cs   = self.Entity.TransformComponent.Scale
         local sc   = math.abs(cs.x)
-        local opts = { SortingLayer = "Character", OrderInLayer = 8, Color = Color(0.5, 0.8, 1, 0.9) }
+        local opts = { SortingLayer = "Character", OrderInLayer = 8, Color = Color(1, 1, 1, 0.9) }
         if self.vfxRUID_IL_Blizzard ~= "" then
             _EffectService:PlayEffect(self.vfxRUID_IL_Blizzard, self.Entity, pos, 0, Vector3(3*sc, 3*sc, 1), false, opts)
         end
@@ -1662,32 +1650,32 @@ script SkillManager extends Component
 
     @ExecSpace("Multicast")
     method void VFX_IL_Elquines()
-        self:PlayVFX(self.vfxRUID_IL_Elquines, self.sfxRUID_IL_Elquines, 1, 0.0, 0.5, 2.0, 2.0, 6, Color(0.4, 0.9, 1.0, 0.9))
+        self:PlayVFX(self.vfxRUID_IL_Elquines, self.sfxRUID_IL_Elquines, 1, 0.0, 0.5, 2.0, 2.0, 6, Color(1, 1, 1, 0.9))
     end
 
     @ExecSpace("Multicast")
     method void VFX_IL_Infinity()
-        self:PlayVFX(self.vfxRUID_IL_Infinity, "", 1, 0.0, 0.5, 2.5, 2.5, 8, Color(1.0, 0.9, 0.3, 0.9))
+        self:PlayVFX(self.vfxRUID_IL_Infinity, "", 1, 0.0, 0.5, 2.5, 2.5, 8, Color(1, 1, 1, 0.9))
     end
 
     @ExecSpace("Multicast")
     method void VFX_IL_ColdBeam(integer dir)
-        self:PlayVFX(self.vfxRUID_IL_ColdBeam, self.sfxRUID_IL_Ice, dir, 2.0, 0.1, 1.5, 0.6, 10, Color(0.3, 0.8, 1, 1))
+        self:PlayVFX(self.vfxRUID_IL_ColdBeam, self.sfxRUID_IL_Ice, dir, 2.0, 0.1, 1.5, 0.6, 10, Color(1, 1, 1, 1))
     end
 
     @ExecSpace("Multicast")
     method void VFX_IL_MagicGuard()
-        self:PlayVFX(self.vfxRUID_IL_MagicGuard, "", 1, 0.0, 0.3, 1.8, 1.8, 15, Color(0.6, 0.8, 1, 0.8))
+        self:PlayVFX(self.vfxRUID_IL_MagicGuard, "", 1, 0.0, 0.3, 1.8, 1.8, 15, Color(1, 1, 1, 0.8))
     end
 
     @ExecSpace("Multicast")
     method void VFX_IL_OverloadMana()
-        self:PlayVFX(self.vfxRUID_IL_OverloadMana, self.sfxRUID_IL_OverloadMana, 1, 0.0, 0.5, 2.0, 2.0, 16, Color(1.0, 0.4, 0.1, 0.9))
+        self:PlayVFX(self.vfxRUID_IL_OverloadMana, self.sfxRUID_IL_OverloadMana, 1, 0.0, 0.5, 2.0, 2.0, 16, Color(1, 1, 1, 0.9))
     end
 
     @ExecSpace("Multicast")
     method void VFX_IL_FrozenLightning(integer dir)
-        self:PlayVFX(self.vfxRUID_IL_FrozenLightning, self.sfxRUID_IL_Lightning, dir, 0.0, 0.5, 4.0, 4.0, 22, Color(0.4, 0.9, 1.0, 1))
+        self:PlayVFX(self.vfxRUID_IL_FrozenLightning, self.sfxRUID_IL_Lightning, dir, 0.0, 0.5, 4.0, 4.0, 22, Color(1, 1, 1, 1))
         if self.sfxRUID_IL_Ice ~= "" then _SoundService:PlaySound(self.sfxRUID_IL_Ice, 0.5) end
     end
 
