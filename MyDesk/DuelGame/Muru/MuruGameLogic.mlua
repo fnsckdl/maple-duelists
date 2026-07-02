@@ -1,0 +1,425 @@
+@Logic
+script MuruGameLogic extends Logic
+
+    -- ── 상수 프로퍼티 ─────────────────────────────────────────
+    property integer HP_BASE        = 1000
+    property number  HP_MULT        = 1.18  -- 20층: ~21,600 (기존 1.4→ 598,000)
+    property number  DMG_MULT       = 1.10  -- 20층: ~489dmg (기존 1.2→ 2,554)
+    property integer BOSS_BASE_DMG  = 80
+    property string  MURU_MAP       = "ellinia"
+    property string  LOBBY_MAP      = "map_lobby"
+
+    -- ── 세션 구조 ─────────────────────────────────────────────
+    -- _T.Sessions[userId] = {
+    --   floor, muruTimer, timerRunning,
+    --   dmgBonus, speedBonus,
+    --   bossEnt, bossId, waitReward
+    -- }
+
+    @ExecSpace("ServerOnly")
+    method void OnBeginPlay()
+        self._T.Sessions = {}
+        log("[MuruGameLogic] 초기화 완료")
+    end
+
+    -- 층 번호로 보스 직업 반환 (0→1→2→3 반복)
+    method integer GetBossJob(integer floor)
+        return (floor - 1) % 4
+    end
+
+    -- 층 번호로 보스 모델 ID 반환
+    method string GetBossModelId(integer floor)
+        local bossList = {
+            "muru_boss_01", -- 1층:  mob/8644510
+            "muru_boss_02", -- 2층:  검은 켄타우로스
+            "muru_boss_03", -- 3층:  대나무 무사
+            "muru_boss_04", -- 4층:  도도
+            "muru_boss_05", -- 5층:  레비아탄
+            "muru_boss_06", -- 6층:  렉스
+            "muru_boss_07", -- 7층:  릴리노흐
+            "muru_boss_08", -- 8층:  마노
+            "muru_boss_09", -- 9층:  마스터 버크
+            "muru_boss_11", -- 10층: 스텀피
+            "muru_boss_12", -- 11층: 주니어 발록
+            "muru_boss_13", -- 12층: 크림슨 발록
+            "muru_boss_14", -- 13층: 킹슬라임
+            "muru_boss_15", -- 14층: 타나토스
+            "muru_boss_16", -- 15층: 파우스트
+            "muru_boss_17", -- 16층: 파풀라투스
+            "muru_boss_18", -- 17층: 푸른 켄타우로스
+            "muru_boss_19", -- 18층: 호루스
+            "muru_boss_20", -- 19층: 호문스큘러
+            "muru_boss_10", -- 20층: 무공 (최종 보스)
+        }
+        local idx = math.min(floor, #bossList)
+        return bossList[idx]
+    end
+
+    -- ── 타이머 틱 ─────────────────────────────────────────────
+    @ExecSpace("ServerOnly")
+    method void OnUpdate(number delta)
+        if self._T.Sessions == nil then return end
+        for userId, sess in pairs(self._T.Sessions) do
+            if sess.timerRunning then
+                sess.muruTimer = sess.muruTimer + delta
+                local playerEnt = _UserService:GetUserEntityByUserId(userId)
+                if isvalid(playerEnt) then
+                    local fc = playerEnt:GetComponent("script.FighterComponent")
+                    if fc ~= nil then
+                        ---@type FighterComponent
+                        local f = fc
+                        f.MuruTimer = sess.muruTimer
+                    end
+                end
+            end
+        end
+    end
+
+    -- ── 세션 시작 (GameManagerLogic.HandlePortalAction → "muru") ──
+    @ExecSpace("ServerOnly")
+    method void StartSession(string userId)
+        if self._T.Sessions == nil then self._T.Sessions = {} end
+        if self._T.Sessions[userId] ~= nil then
+            log("[MuruGameLogic] 이미 세션 중: " .. userId)
+            return
+        end
+        self._T.Sessions[userId] = {
+            floor        = 1,
+            muruTimer    = 0.0,
+            timerRunning = false,
+            dmgBonus     = 0.0,
+            speedBonus   = 0.0,
+            bossEnt      = nil,
+            bossId       = "",
+            waitReward   = false,
+        }
+        log("[MuruGameLogic] 세션 시작: " .. userId)
+        self:StartFloor(userId, 1)
+    end
+
+    -- ── 층 시작 ───────────────────────────────────────────────
+    @ExecSpace("ServerOnly")
+    method void StartFloor(string userId, integer floor)
+        local sess = self._T.Sessions[userId]
+        if sess == nil then return end
+        sess.floor      = floor
+        sess.waitReward = false
+
+        local playerEnt = _UserService:GetUserEntityByUserId(userId)
+        if not isvalid(playerEnt) then
+            self:CleanupSession(userId)
+            return
+        end
+
+        local playerPos = Vector3(-4, 1, 0)
+        local bossPos   = Vector3( 4, 1, 0)
+        _TeleportService:TeleportToMapPosition(playerEnt, playerPos, self.MURU_MAP)
+
+        -- 스테이지 스탯 계산
+        local hpMult  = 1.0
+        local dmgMult = 1.0
+        for i = 2, floor do
+            hpMult  = hpMult  * self.HP_MULT
+            dmgMult = dmgMult * self.DMG_MULT
+        end
+        local bossHP  = math.floor(self.HP_BASE * hpMult)
+        local aiDelay = math.max(0.3, 1.5 - (floor - 1) * 0.065)
+        local bossJob     = self:GetBossJob(floor)
+        local bossModelId = self:GetBossModelId(floor)
+        local bossId      = "MURU_BOSS_" .. userId
+        sess.bossId       = bossId
+
+        local muruMap = _EntityService:GetEntityByPath("/maps/" .. self.MURU_MAP)
+        if not isvalid(muruMap) then
+            log("[MuruGameLogic] 맵 없음: " .. self.MURU_MAP)
+            self:CleanupSession(userId)
+            return
+        end
+
+        if sess.bossEnt ~= nil and isvalid(sess.bossEnt) then
+            _EntityService:Destroy(sess.bossEnt)
+            sess.bossEnt = nil
+        end
+
+        local bossEnt = _SpawnService:SpawnByModelId(bossModelId, bossId, bossPos, muruMap)
+        if not isvalid(bossEnt) then
+            log("[MuruGameLogic] 보스 스폰 실패 — EntryKey=" .. bossModelId)
+            self:CleanupSession(userId)
+            return
+        end
+        sess.bossEnt = bossEnt
+
+        local bossFC = bossEnt:GetComponent("script.FighterComponent")
+        if bossFC ~= nil then
+            ---@type FighterComponent
+            local bf = bossFC
+            bf.MaxHP     = bossHP
+            bf.HP        = bossHP
+            bf.MatchMode = "muru"
+            bf.OppUserId = userId
+        end
+
+        local bot = bossEnt:GetComponent("script.MuruBossBot")
+        if bot ~= nil then
+            ---@type MuruBossBot
+            local b = bot
+            b.OwnerUserId  = userId
+            b.BossId       = bossId
+            b.BossJobClass = bossJob
+            b.DmgMult      = dmgMult
+            b.BaseDmg      = self.BOSS_BASE_DMG
+            b.AiDelay      = aiDelay
+        end
+
+        local fc = playerEnt:GetComponent("script.FighterComponent")
+        if fc ~= nil then
+            ---@type FighterComponent
+            local f = fc
+            f.MatchMode      = "muru"
+            f.MuruFloor      = floor
+            f.MuruState      = "fighting"
+            f.MuruDmgBonus   = sess.dmgBonus
+            f.MuruSpeedBonus = sess.speedBonus
+            f.OppUserId      = bossId
+            -- 1층: HP·게이지 완전 초기화 / 2층~: HP 유지, 게이지 30 보장
+            if floor == 1 then
+                f.HP          = f.MaxHP
+                f.OriginGauge = 100
+            else
+                -- 이전 층에서 게이지를 다 썼어도 30은 보장 (전투로 채워 사용 가능)
+                if f.OriginGauge < 30 then
+                    f.OriginGauge = 30
+                end
+            end
+            f.IsOriginUsed   = false
+            f.JobLevel       = 5
+            for i = 1, 16 do
+                f.SkillCDs[i] = 0.0
+            end
+            local mv = playerEnt.MovementComponent
+            if isvalid(mv) then
+                mv.InputSpeed = f.BaseInputSpeed * (1 + sess.speedBonus)
+            end
+        end
+
+        sess.timerRunning = true
+        if floor == 1 then
+            sess.muruTimer = 0.0
+        end
+
+        log(string.format("[MuruGameLogic] %s %d층 | HP=%d DmgMult=%.2f Job=%d Delay=%.2f",
+            userId, floor, bossHP, dmgMult, bossJob, aiDelay))
+    end
+
+    -- ── 보스 사망 (FighterComponent.NotifyDeath 에서 호출) ────
+    @ExecSpace("ServerOnly")
+    method void OnBossDeath(string ownerUserId)
+        local sess = self._T.Sessions[ownerUserId]
+        if sess == nil then return end
+        sess.timerRunning = false
+
+        local playerEnt = _UserService:GetUserEntityByUserId(ownerUserId)
+        if isvalid(playerEnt) then
+            local fc = playerEnt:GetComponent("script.FighterComponent")
+            if fc ~= nil then
+                ---@type FighterComponent
+                local f = fc
+                f.MuruState = "reward"
+            end
+        end
+
+        log(string.format("[MuruGameLogic] %s %d층 보스 처치!", ownerUserId, sess.floor))
+
+        if sess.floor >= 20 then
+            self:EndSession(ownerUserId, true)
+        else
+            sess.waitReward = true
+            self:ShowRewardRPC(ownerUserId, sess.floor)
+        end
+    end
+
+    -- ── 플레이어 사망 (FighterComponent.NotifyDeath 에서 호출) ─
+    @ExecSpace("ServerOnly")
+    method void OnPlayerDeath(string userId)
+        local sess = self._T.Sessions[userId]
+        if sess == nil then return end
+        log("[MuruGameLogic] 플레이어 사망: " .. userId .. " (" .. sess.floor .. "층)")
+        self:EndSession(userId, false)
+    end
+
+    -- ── 보상 적용 (FighterInput.RequestMuruReward → 직접 호출) ──
+    @ExecSpace("ServerOnly")
+    method void ApplyReward(string userId, integer choice)
+        local sess = self._T.Sessions[userId]
+        if sess == nil or not sess.waitReward then return end
+        sess.waitReward = false
+
+        local playerEnt = _UserService:GetUserEntityByUserId(userId)
+        if not isvalid(playerEnt) then return end
+        local fc = playerEnt:GetComponent("script.FighterComponent")
+
+        if choice == 1 then
+            if fc ~= nil then
+                ---@type FighterComponent
+                local f = fc
+                local heal = math.floor(f.MaxHP * 0.5)
+                f.HP = math.min(f.MaxHP, f.HP + heal)
+                log(string.format("[MuruGameLogic] %s 보상①: 회복 +%d", userId, heal))
+            end
+        elseif choice == 2 then
+            sess.dmgBonus = sess.dmgBonus + 0.15
+            if fc ~= nil then
+                ---@type FighterComponent
+                local f = fc
+                f.MuruDmgBonus = sess.dmgBonus
+            end
+            log(string.format("[MuruGameLogic] %s 보상②: 공격 +15%% 총%.0f%%", userId, sess.dmgBonus * 100))
+        elseif choice == 3 then
+            sess.speedBonus = sess.speedBonus + 0.10
+            if fc ~= nil then
+                ---@type FighterComponent
+                local f = fc
+                f.MuruSpeedBonus = sess.speedBonus
+                local mv = playerEnt.MovementComponent
+                if isvalid(mv) then
+                    mv.InputSpeed = f.BaseInputSpeed * (1 + sess.speedBonus)
+                end
+            end
+            log(string.format("[MuruGameLogic] %s 보상③: 이속 +10%% 총%.0f%%", userId, sess.speedBonus * 100))
+        elseif choice == 4 then
+            if fc ~= nil then
+                ---@type FighterComponent
+                local f = fc
+                f.OriginGauge  = 100
+                f.IsOriginUsed = false
+            end
+            log("[MuruGameLogic] " .. userId .. " 보상④: 오리진 완충")
+        end
+
+        self:HideRewardRPC(userId)
+        self:StartFloor(userId, sess.floor + 1)
+    end
+
+    -- ── 세션 종료 ─────────────────────────────────────────────
+    @ExecSpace("ServerOnly")
+    method void EndSession(string userId, boolean won)
+        local sess = self._T.Sessions[userId]
+        if sess == nil then return end
+
+        local finalTime = sess.muruTimer
+        local floor     = sess.floor
+        sess.timerRunning = false
+
+        if sess.bossEnt ~= nil and isvalid(sess.bossEnt) then
+            local bossToDestroy = sess.bossEnt
+            sess.bossEnt = nil
+            if won then
+                -- 보스 사망 모션 재생 대기 후 파괴
+                _TimerService:SetTimerOnce(function()
+                    if isvalid(bossToDestroy) then
+                        _EntityService:Destroy(bossToDestroy)
+                    end
+                end, 1.5)
+            else
+                _EntityService:Destroy(bossToDestroy)
+            end
+        end
+
+        local endState = "dead"
+        if won then endState = "clear" end
+
+        local playerEnt = _UserService:GetUserEntityByUserId(userId)
+        if isvalid(playerEnt) then
+            local fc = playerEnt:GetComponent("script.FighterComponent")
+            if fc ~= nil then
+                ---@type FighterComponent
+                local f = fc
+                f.MuruTimer = finalTime
+                f.MuruState = endState
+            end
+        end
+
+        local resultStr = "실패"
+        if won then resultStr = "클리어" end
+        log(string.format("[MuruGameLogic] %s %s | %.2fs 층=%d", userId, resultStr, finalTime, floor))
+
+        self._T.Sessions[userId] = nil
+
+        _TimerService:SetTimerOnce(function()
+            self:ReturnToLobby(userId)
+        end, 5.0)
+    end
+
+    @ExecSpace("ServerOnly")
+    method void ReturnToLobby(string userId)
+        local playerEnt = _UserService:GetUserEntityByUserId(userId)
+        if not isvalid(playerEnt) then return end
+
+        local fc = playerEnt:GetComponent("script.FighterComponent")
+        if fc ~= nil then
+            ---@type FighterComponent
+            local f = fc
+            f.MatchMode      = "none"
+            f.MuruFloor      = 0
+            f.MuruState      = "none"
+            f.MuruTimer      = 0.0
+            f.MuruDmgBonus   = 0.0
+            f.MuruSpeedBonus = 0.0
+            f.OppUserId      = ""
+            f.HP             = f.MaxHP
+            local mv = playerEnt.MovementComponent
+            if isvalid(mv) then mv.InputSpeed = f.BaseInputSpeed end
+        end
+
+        -- 비석(DEAD) 상태 해제: ProcessRevive로 플레이어 애니메이션 복구
+        if isvalid(playerEnt.PlayerComponent) then
+            playerEnt.PlayerComponent:ProcessRevive(userId)
+        end
+
+        local lobbyPos = Vector3(0, 1, 0)
+        _TeleportService:TeleportToMapPosition(playerEnt, lobbyPos, self.LOBBY_MAP)
+        log("[MuruGameLogic] " .. userId .. " → 로비 복귀")
+    end
+
+    -- ── 나가기 버튼 (전투 중 강제 퇴장) ─────────────────────
+    @ExecSpace("ServerOnly")
+    method void ForceExit(string userId)
+        local sess = self._T.Sessions[userId]
+        if sess == nil then return end
+        log("[MuruGameLogic] " .. userId .. " 나가기 요청 (" .. sess.floor .. "층)")
+        self:EndSession(userId, false)
+    end
+
+    @ExecSpace("ServerOnly")
+    method void CleanupSession(string userId)
+        local sess = self._T.Sessions[userId]
+        if sess == nil then return end
+        if sess.bossEnt ~= nil and isvalid(sess.bossEnt) then
+            _EntityService:Destroy(sess.bossEnt)
+        end
+        self._T.Sessions[userId] = nil
+    end
+
+    -- ── 보상 패널 클라이언트 RPC ──────────────────────────────
+    @ExecSpace("ServerOnly")
+    method void ShowRewardRPC(string userId, integer floor)
+        -- userId는 Client RPC 마지막 인자로 전달 → 해당 클라이언트에만 실행
+        self:ClientShowReward(floor, userId)
+    end
+
+    @ExecSpace("Client")
+    method void ClientShowReward(integer clearedFloor)
+        -- targetUserId는 예약어 — 선언 금지, 엔진이 마지막 콜사이트 인자로 처리
+        _MuruHUDLogic:ShowRewardPanel(clearedFloor)
+    end
+
+    @ExecSpace("ServerOnly")
+    method void HideRewardRPC(string userId)
+        self:ClientHideReward(userId)
+    end
+
+    @ExecSpace("Client")
+    method void ClientHideReward()
+        _MuruHUDLogic:HideRewardPanel()
+    end
+end

@@ -1,0 +1,152 @@
+@Logic
+script MuruHUDLogic extends Logic
+
+    -- ── UI 위젯 바인딩 (UIBuilder 자동 주입) ──────────────────
+    property Entity              hudPanel    = "29d24cdc-1bb0-4671-a20f-b58e8b709f91"
+    property TextComponent       floorLabel  = "31254700-005c-4e44-866e-438ca178d6a7"
+    property TextComponent       timerLabel  = "cbdbd8eb-ecfc-4fa8-915a-22836062ebb9"
+    property Entity              rewardPanel = "3a67276c-3d19-4c96-b246-a47e44494da0"
+    property ButtonComponent     btn1        = "40cfa404-e0f3-40f1-9c87-042af5069458"
+    property ButtonComponent     btn2        = "2f73476a-eeb3-4daa-b51d-9270a25d39db"
+    property ButtonComponent     btn3        = "ec499aff-c7d2-45dc-b0f7-757f507ed8b2"
+    property ButtonComponent     btn4        = "fa9a5ff2-2735-4c7e-9997-a2c8b34839a1"
+    property Entity              endPanel    = "a239c8e2-41c0-4083-bc42-a20f9e6493d2"
+    property TextComponent       endLabel    = "bc9ac862-6311-4631-aacf-a16ba26d5cf6"
+
+    -- ── 생명주기 ──────────────────────────────────────────────
+    @ExecSpace("ClientOnly")
+    method void OnBeginPlay()
+        self._T.hudVisible    = false
+        self._T.lastFloor     = -1
+        self._T.lastState     = "none"
+        self._T.rewardVisible = false
+        self._T.endVisible    = false
+
+        if isvalid(self.hudPanel)    then self.hudPanel.Visible    = false end
+        if isvalid(self.rewardPanel) then self.rewardPanel.Visible = false end
+        if isvalid(self.endPanel)    then self.endPanel.Visible    = false end
+
+        if isvalid(self.btn1) then
+            self._T.h1 = self.btn1.Entity:ConnectEvent(ButtonClickEvent, function() self:OnRewardChoice(1) end)
+        end
+        if isvalid(self.btn2) then
+            self._T.h2 = self.btn2.Entity:ConnectEvent(ButtonClickEvent, function() self:OnRewardChoice(2) end)
+        end
+        if isvalid(self.btn3) then
+            self._T.h3 = self.btn3.Entity:ConnectEvent(ButtonClickEvent, function() self:OnRewardChoice(3) end)
+        end
+        if isvalid(self.btn4) then
+            self._T.h4 = self.btn4.Entity:ConnectEvent(ButtonClickEvent, function() self:OnRewardChoice(4) end)
+        end
+        log("[MuruHUDLogic] 초기화 완료")
+    end
+
+    @ExecSpace("ClientOnly")
+    method void OnEndPlay()
+        if self._T.h1 ~= nil and isvalid(self.btn1) then
+            self.btn1.Entity:DisconnectEvent(ButtonClickEvent, self._T.h1)
+            self._T.h1 = nil
+        end
+        if self._T.h2 ~= nil and isvalid(self.btn2) then
+            self.btn2.Entity:DisconnectEvent(ButtonClickEvent, self._T.h2)
+            self._T.h2 = nil
+        end
+        if self._T.h3 ~= nil and isvalid(self.btn3) then
+            self.btn3.Entity:DisconnectEvent(ButtonClickEvent, self._T.h3)
+            self._T.h3 = nil
+        end
+        if self._T.h4 ~= nil and isvalid(self.btn4) then
+            self.btn4.Entity:DisconnectEvent(ButtonClickEvent, self._T.h4)
+            self._T.h4 = nil
+        end
+    end
+
+    -- ── 매 프레임: FighterComponent 상태 감지 → UI 갱신 ────
+    @ExecSpace("ClientOnly")
+    method void OnUpdate(number delta)
+        local player = _UserService.LocalPlayer
+        if not isvalid(player) then return end
+
+        local fc = player:GetComponent("script.FighterComponent")
+        if fc == nil then return end
+        ---@type FighterComponent
+        local f = fc
+
+        local muruFloor = f.MuruFloor
+        local muruState = f.MuruState
+        local muruTimer = f.MuruTimer
+
+        -- 무릉 미진입 → 조기 종료
+        if muruFloor == 0 then return end
+
+        -- 상태 전환 감지 → 결과 화면 (층/타이머 표시는 DuelHUDLogic 담당)
+        if self._T.lastState ~= muruState then
+            self._T.lastState = muruState
+            if muruState == "clear" or muruState == "dead" then
+                self:ShowEndResult(muruState, muruTimer)
+            end
+        end
+    end
+
+    -- ── 내부 유틸 ────────────────────────────────────────────
+    @ExecSpace("ClientOnly")
+    method string FormatTime(number seconds)
+        local m  = math.floor(seconds / 60)
+        local s  = math.floor(seconds % 60)
+        local cs = math.floor((seconds % 1) * 100)
+        return string.format("%02d:%02d.%02d", m, s, cs)
+    end
+
+    -- ── 외부 호출 API (MuruGameLogic.ClientShowReward 에서 호출) ──
+
+    @ExecSpace("ClientOnly")
+    method void ShowRewardPanel(integer clearedFloor)
+        self._T.rewardVisible = true
+        if isvalid(self.rewardPanel) then self.rewardPanel.Visible = true end
+        log("[MuruHUDLogic] 보상 패널 표시 (" .. clearedFloor .. "층 클리어)")
+    end
+
+    @ExecSpace("ClientOnly")
+    method void HideRewardPanel()
+        self._T.rewardVisible = false
+        if isvalid(self.rewardPanel) then self.rewardPanel.Visible = false end
+    end
+
+    @ExecSpace("ClientOnly")
+    method void ShowEndResult(string state, number finalTime)
+        if self._T.endVisible then return end
+        self._T.endVisible = true
+
+        local timeStr = self:FormatTime(finalTime)
+        local msg = ""
+        if state == "clear" then
+            msg = "20층 클리어! 기록: " .. timeStr
+        else
+            msg = "도전 실패 (" .. timeStr .. ")"
+        end
+
+        if isvalid(self.endPanel) then self.endPanel.Visible = true end
+        if isvalid(self.endLabel) then self.endLabel.Text = msg end
+        log("[MuruHUDLogic] 결과 화면: " .. msg)
+
+        _TimerService:SetTimerOnce(function()
+            self._T.endVisible = false
+            if isvalid(self.endPanel) then self.endPanel.Visible = false end
+        end, 5.0)
+    end
+
+    -- ── 보상 버튼 핸들러 ─────────────────────────────────────
+    @ExecSpace("ClientOnly")
+    method void OnRewardChoice(integer choice)
+        if not self._T.rewardVisible then return end
+        local player = _UserService.LocalPlayer
+        if not isvalid(player) then return end
+        local fi = player:GetComponent("script.FighterInput")
+        if fi == nil then return end
+        ---@type FighterInput
+        local input = fi
+        input:RequestMuruReward(choice)
+        self:HideRewardPanel()
+        log("[MuruHUDLogic] 보상 선택: " .. choice)
+    end
+end

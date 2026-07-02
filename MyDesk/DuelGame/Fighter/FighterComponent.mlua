@@ -38,13 +38,40 @@ script FighterComponent extends Component
     @Sync property SyncTable<integer, number> SkillMaxCDs
 
     -- ── 직업 / 확장 버프 상태 ────────────────────────
-    @Sync property integer JobClass     = 0     -- 0=히어로, 1=신궁
+    @Sync property integer JobClass     = 0     -- 0=히어로, 1=신궁, 2=섀도어, 3=썬콜
     @Sync property boolean FinalAimBuff = false
     @Sync property boolean IsSlowed     = false
 
     property number FinalAimTimer  = 0
     property number SlowTimer      = 0
-    property number BaseInputSpeed = 3.0
+    property number BaseInputSpeed = 1.5
+
+    -- ── 섀도어 전용 버프 상태 ────────────────────────
+    @Sync property boolean CoinFlipBuff   = false
+    property number CoinFlipTimer   = 0
+    @Sync property boolean IsInvincible   = false   -- 연막탄 1초 무적
+    property number InvincibleTimer = 0
+    @Sync property boolean DarkSightActive = false  -- 다크사이트: 투사체 면역
+    property number DarkSightTimer  = 0
+    @Sync property boolean HeistActive    = false   -- 헤이스트: 이속 1.5배
+    property number HeistTimer      = 0
+
+    -- ── 썬콜 전용 버프 상태 ──────────────────────────
+    @Sync property boolean InfinityBuff    = false
+    property number InfinityTimer    = 0
+    @Sync property boolean ElquinesActive  = false
+    property number ElquinesTimer    = 0
+    @Sync property boolean MagicGuardActive = false -- 매직 가드: 5초간 피해 40% 감소
+    property number MagicGuardTimer  = 0
+    @Sync property boolean OverloadActive   = false -- 오버로드 마나: 5초간 데미지 1.5배 (HP 소모)
+    property number OverloadTimer    = 0
+
+    -- ── 무릉도장 전용 동기화 상태 ────────────────────────
+    @Sync property integer MuruFloor      = 0      -- 0=무릉 아님, 1-20=진행 층
+    @Sync property number  MuruTimer      = 0.0    -- 경과 시간 (초)
+    @Sync property string  MuruState      = "none" -- "none"|"fighting"|"reward"|"clear"|"dead"
+    @Sync property number  MuruDmgBonus   = 0.0    -- 누적 데미지 보너스 (보상②마다 +0.15)
+    @Sync property number  MuruSpeedBonus = 0.0    -- 누적 이속 보너스  (보상③마다 +0.10)
 
     -- ── 내부 전투 상태 ───────────────────────────────
     property boolean IsOriginUsed   = false
@@ -54,7 +81,7 @@ script FighterComponent extends Component
 
     @ExecSpace("ServerOnly")
     method void OnInitialize()
-        for i = 1, 10 do
+        for i = 1, 16 do
             self.SkillCDs[i]    = 0.0
             self.SkillMaxCDs[i] = 1.0
         end
@@ -103,7 +130,7 @@ script FighterComponent extends Component
             end
         end
 
-        for i = 1, 10 do
+        for i = 1, 16 do
             local cd = self.SkillCDs[i]
             if cd ~= nil and cd > 0 then
                 self.SkillCDs[i] = math.max(0, cd - delta)
@@ -136,7 +163,62 @@ script FighterComponent extends Component
             end
         end
 
-        -- 훈련장: 오리진 게이지 자동 충전 (20/초 → 5초에 만충)
+        if self.CoinFlipBuff then
+            self.CoinFlipTimer = self.CoinFlipTimer - delta
+            if self.CoinFlipTimer <= 0 then
+                self.CoinFlipBuff  = false
+                self.CoinFlipTimer = 0
+            end
+        end
+
+        if self.InfinityBuff then
+            self.InfinityTimer = self.InfinityTimer - delta
+            if self.InfinityTimer <= 0 then
+                self.InfinityBuff  = false
+                self.InfinityTimer = 0
+            end
+        end
+
+        if self.MagicGuardActive then
+            self.MagicGuardTimer = self.MagicGuardTimer - delta
+            if self.MagicGuardTimer <= 0 then
+                self.MagicGuardActive = false
+                self.MagicGuardTimer  = 0
+            end
+        end
+
+        if self.OverloadActive then
+            self.OverloadTimer = self.OverloadTimer - delta
+            if self.OverloadTimer <= 0 then
+                self.OverloadActive = false
+                self.OverloadTimer  = 0
+            end
+        end
+
+        if self.IsInvincible then
+            self.InvincibleTimer = self.InvincibleTimer - delta
+            if self.InvincibleTimer <= 0 then
+                self.IsInvincible   = false
+                self.InvincibleTimer = 0
+            end
+        end
+
+        if self.DarkSightActive then
+            self.DarkSightTimer = self.DarkSightTimer - delta
+            if self.DarkSightTimer <= 0 then
+                self.DarkSightActive = false
+                self.DarkSightTimer  = 0
+            end
+        end
+
+        if self.HeistActive then
+            self.HeistTimer = self.HeistTimer - delta
+            if self.HeistTimer <= 0 then
+                self:DeactivateHeist()
+            end
+        end
+
+        -- 훈련장: 오리진 게이지 자동 충전 (20/초 → 5초에 만충, 무릉은 전투로만 충전)
         if self.MatchMode == "practice" and self.OriginGauge < 100 then
             self.OriginGauge = math.min(100, self.OriginGauge + delta * 20)
         end
@@ -160,15 +242,31 @@ script FighterComponent extends Component
         self.DotDamagePerTick = 0
         self.DotTicksLeft    = 0
         self.DotTickTimer    = 0
-        for i = 1, 10 do
+        for i = 1, 16 do
             self.SkillCDs[i] = 0
         end
         self.ComboHitCount   = 0
         self.ComboResetTimer = 0
         self.FinalAimBuff    = false
         self.FinalAimTimer   = 0
+        self.CoinFlipBuff    = false
+        self.CoinFlipTimer   = 0
+        self.InfinityBuff    = false
+        self.InfinityTimer   = 0
+        self.ElquinesActive  = false
+        self.ElquinesTimer   = 0
+        self.IsInvincible   = false
+        self.InvincibleTimer = 0
+        self.DarkSightActive = false
+        self.DarkSightTimer  = 0
+        self.HeistActive    = false
+        self.HeistTimer     = 0
         self.IsSlowed        = false
         self.SlowTimer       = 0
+        self.MagicGuardActive = false
+        self.MagicGuardTimer  = 0
+        self.OverloadActive   = false
+        self.OverloadTimer    = 0
         local mv = self.Entity.MovementComponent
         if isvalid(mv) then mv.InputSpeed = self.BaseInputSpeed end
         log("[FighterComponent] 라운드 " .. round .. " 리셋 완료. JobLevel=" .. round)
@@ -181,12 +279,35 @@ script FighterComponent extends Component
             finalDamage = math.floor(rawDamage * 0.2)
             self:AddGauge(2)
         else
+            if self.MagicGuardActive then
+                finalDamage = math.floor(rawDamage * 0.6)
+            end
             self:AddGauge(5)
         end
         self.HP = math.max(0, self.HP - finalDamage)
         log("[Fighter] TakeDamage: " .. finalDamage .. " → HP=" .. self.HP)
         if self.HP <= 0 then
+            -- 훈련장 더미: 죽지 않고 HP 1 유지
+            if self.Entity:GetComponent("script.DummyFighterComponent") ~= nil then
+                self.HP = 1
+                return
+            end
             self:NotifyDeath()
+            return
+        end
+        -- 보스가 직접 TakeDamage를 호출할 때 플레이어·더미 피격 모션
+        -- (보스 피격은 FighterHit.OnHit에서 별도 처리)
+        if self.Entity:GetComponent("script.MuruBossBot") == nil then
+            local sc = self.Entity.StateComponent
+            if isvalid(sc) and sc.CurrentStateName ~= "DEAD" then
+                sc:ChangeState("HIT")
+                _TimerService:SetTimerOnce(function()
+                    local sc2 = self.Entity.StateComponent
+                    if isvalid(sc2) and sc2.CurrentStateName ~= "DEAD" then
+                        sc2:ChangeState("IDLE")
+                    end
+                end, 0.35)
+            end
         end
     end
 
@@ -231,6 +352,97 @@ script FighterComponent extends Component
     end
 
     @ExecSpace("ServerOnly")
+    method void ActivateCoinFlip()
+        -- 섀도어: 다음 스킬 1회 20% 대미지 증폭 (5초 유효)
+        self.CoinFlipBuff  = true
+        self.CoinFlipTimer = 5.0
+    end
+
+    @ExecSpace("ServerOnly")
+    method void ActivateInvincible(number duration)
+        self.IsInvincible   = true
+        self.InvincibleTimer = duration
+    end
+
+    @ExecSpace("ServerOnly")
+    method void ActivateDarkSight(number duration)
+        self.DarkSightActive = true
+        self.DarkSightTimer  = duration
+    end
+
+    @ExecSpace("ServerOnly")
+    method void ActivateHeist(number duration)
+        self.HeistActive = true
+        self.HeistTimer  = duration
+        local mv = self.Entity.MovementComponent
+        if isvalid(mv) then mv.InputSpeed = self.BaseInputSpeed * 1.5 end
+    end
+
+    @ExecSpace("ServerOnly")
+    method void DeactivateHeist()
+        self.HeistActive = false
+        self.HeistTimer  = 0
+        local mv = self.Entity.MovementComponent
+        if isvalid(mv) then mv.InputSpeed = self.BaseInputSpeed end
+    end
+
+    @ExecSpace("ServerOnly")
+    method void ActivateElquines(number duration)
+        self.ElquinesActive = true
+        self.ElquinesTimer  = duration
+    end
+
+    @ExecSpace("ServerOnly")
+    method void ActivateMagicGuard(number duration)
+        self.MagicGuardActive = true
+        self.MagicGuardTimer  = duration
+    end
+
+    @ExecSpace("ServerOnly")
+    method void ActivateOverloadMana(integer hpCost, number duration)
+        -- HP가 부족하면 최소 1 남기고 가능한 만큼만 소모
+        local cost = math.min(hpCost, self.HP - 1)
+        if cost <= 0 then return end
+        self.HP = self.HP - cost
+        self.OverloadActive = true
+        self.OverloadTimer  = duration
+        log("[FighterComponent] 오버로드 마나: HP " .. cost .. " 소모, " .. duration .. "초간 1.5배")
+    end
+
+    @ExecSpace("ServerOnly")
+    method void ActivateInfinity()
+        -- 썬콜: 5초간 모든 스킬 쿨타임 절반으로 감소
+        self.InfinityBuff  = true
+        self.InfinityTimer = 5.0
+        -- 현재 진행 중인 CD를 즉시 절반으로 단축
+        for i = 1, 16 do
+            local cd = self.SkillCDs[i]
+            if cd ~= nil and cd > 0 then
+                self.SkillCDs[i] = cd * 0.5
+            end
+        end
+    end
+
+    -- SetSkillCD with Infinity buff 고려
+    @ExecSpace("ServerOnly")
+    method void SetSkillCDWithBuff(integer slot, number cd)
+        local finalCD = self.InfinityBuff and (cd * 0.5) or cd
+        self.SkillCDs[slot]    = finalCD
+        self.SkillMaxCDs[slot] = finalCD
+    end
+
+    method number GetDamageMult()
+        -- CoinFlip 소비 후 배율 반환. 서버에서 피해 계산 시 1회 사용.
+        local mult = self:GetDamageMultiplier()
+        if self.CoinFlipBuff then
+            mult = mult * 1.2
+            self.CoinFlipBuff  = false
+            self.CoinFlipTimer = 0
+        end
+        return mult
+    end
+
+    @ExecSpace("ServerOnly")
     method void ApplySlow(number duration)
         self.IsSlowed  = true
         self.SlowTimer = duration
@@ -245,7 +457,8 @@ script FighterComponent extends Component
     @ExecSpace("ServerOnly")
     method boolean TryUseOrigin()
         if self.OriginGauge < 100 then return false end
-        -- 훈련장: IsOriginUsed를 세우지 않으므로 게이지가 다시 채워진다
+        -- 훈련장: IsOriginUsed를 세우지 않으므로 무한 사용 가능
+        -- 무릉·일반: 층당/라운드당 1회만
         if self.IsOriginUsed and self.MatchMode ~= "practice" then return false end
         self.OriginGauge = 0
         if self.MatchMode ~= "practice" then
@@ -256,7 +469,7 @@ script FighterComponent extends Component
 
     @ExecSpace("ServerOnly")
     method void AddGauge(number amount)
-        -- 훈련장에서는 IsOriginUsed 여부와 무관하게 충전 허용
+        -- 훈련장: 무한 충전 / 무릉·일반: 사용 후 더 이상 충전 안 됨
         if self.IsOriginUsed and self.MatchMode ~= "practice" then return end
         self.OriginGauge = math.min(100, self.OriginGauge + amount)
     end
@@ -273,8 +486,9 @@ script FighterComponent extends Component
 
     method number GetDamageMultiplier()
         local mult = 1.0
-        if self.ComboBuff  then mult = mult * 1.15 end
-        if self.IsValhalla then mult = mult * 1.5  end
+        if self.ComboBuff     then mult = mult * 1.15 end
+        if self.IsValhalla    then mult = mult * 1.5  end
+        if self.OverloadActive then mult = mult * 1.5  end
         return mult
     end
 
@@ -286,11 +500,20 @@ script FighterComponent extends Component
         return self:IsAlive() and not self.IsStunned
     end
 
-    @ExecSpace("ServerOnly")
     method void NotifyDeath()
         log("[Fighter] 사망! userId=" .. self.OppUserId)
         if isvalid(self.Entity.StateComponent) then
             self.Entity.StateComponent:ChangeState("DEAD")
+        end
+
+        -- 무릉 보스 사망 우선 처리
+        local muruBot = self.Entity:GetComponent("script.MuruBossBot")
+        if muruBot ~= nil then
+            ---@type MuruBossBot
+            local mb = muruBot
+            mb:PlayDieSFX()
+            _MuruGameLogic:OnBossDeath(mb.OwnerUserId)
+            return
         end
 
         -- 자신의 userId 결정
@@ -307,8 +530,14 @@ script FighterComponent extends Component
             end
         end
 
-        if userId ~= "" then
-            _GameManagerLogic:OnFighterDeath(userId)
+        if userId == "" then return end
+
+        -- 무릉 진행 중 플레이어 사망
+        if self.MuruFloor > 0 then
+            _MuruGameLogic:OnPlayerDeath(userId)
+            return
         end
+
+        _GameManagerLogic:OnFighterDeath(userId)
     end
 end

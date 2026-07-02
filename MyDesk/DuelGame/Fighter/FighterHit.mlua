@@ -3,10 +3,17 @@ script FighterHit extends HitComponent
     -- ⚠ HitComponent 오버라이드 메서드에는 @ExecSpace 금지 (LEA-3014)
 
     method void OnHit(Entity attacker, integer damage, boolean isCritical, string attackInfo, int32 hitCount)
+        -- 자해 방지: 엘퀴네스·장판 등 독립 엔티티 포함
+        if attacker == self.Entity then return end
+
         local fc = self.Entity:GetComponent("script.FighterComponent")
         if fc == nil then return end
         ---@type FighterComponent
         local fighter = fc
+
+        -- 연막탄 무적 / 다크사이트 은신: 모든 피해 면역
+        if fighter.IsInvincible then return end
+        if fighter.DarkSightActive then return end
 
         -- 가드 관통 판정 스킬
         local guardPiercing = (attackInfo == "origin")
@@ -16,6 +23,24 @@ script FighterHit extends HitComponent
 
         -- 피해 적용 (가드 감소 포함)
         fighter:TakeDamage(damage, guardPiercing)
+
+        -- 무릉 보스: 피격 애니메이션 + 사운드
+        local muruBot = self.Entity:GetComponent("script.MuruBossBot")
+        if muruBot ~= nil then
+            ---@type MuruBossBot
+            local bot = muruBot
+            local sc = self.Entity.StateComponent
+            if isvalid(sc) and sc.CurrentStateName ~= "DEAD" then
+                sc:ChangeState("HIT")
+                bot:PlayHitSFX()
+                _TimerService:SetTimerOnce(function()
+                    local sc2 = self.Entity.StateComponent
+                    if isvalid(sc2) and sc2.CurrentStateName ~= "DEAD" then
+                        sc2:ChangeState("IDLE")
+                    end
+                end, 0.35)
+            end
+        end
 
         -- attackInfo별 특수 효과
         if attackInfo == "rush2" then
@@ -46,12 +71,28 @@ script FighterHit extends HitComponent
             -- 3차 모탈 블로우: 3초 이동속도 감소
             fighter:ApplySlow(3.0)
 
+        elseif attackInfo == "frozen_lightning" then
+            -- 프로즌 라이트닝: 3초 완전 기절 (SuperArmor 예외 없이 강제)
+            fighter.IsStunned = true
+            fighter.StunTimer = 3.0
+
+        elseif attackInfo == "elquines_arrow" then
+            -- 엘퀴네스 얼음 화살: 0.3초 경직
+            fighter:ApplyStun(0.3)
+
         end
     end
 
     method boolean IsHitTarget(string attackInfo)
-        -- 오리진 스킬: 항상 적중 (가드/회피 불가)
-        if attackInfo == "origin" then return true end
+        local fc = self.Entity:GetComponent("script.FighterComponent")
+        if fc ~= nil then
+            ---@type FighterComponent
+            local f = fc
+            -- 은신 중: origin 제외 모든 공격 무시 (완전 타겟팅 제외)
+            if (f.DarkSightActive or f.IsInvincible) and attackInfo ~= "origin" then
+                return false
+            end
+        end
         return __base:IsHitTarget(attackInfo)
     end
 end

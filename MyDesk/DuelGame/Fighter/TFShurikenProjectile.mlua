@@ -1,12 +1,12 @@
 @Component
-script BMArrowProjectile extends Component
+script TFShurikenProjectile extends Component
 
-    property number  speed   = 10.0
-    property number  maxDist = 10.0
-    property string  hitRUID = "387ec9be0573409da315e5b3392f41e4"  -- 파이널 어택:활 hit/0
-    property integer initDir = 0  -- 0=미초기화 / 1=오른쪽 / -1=왼쪽
+    property number  speed   = 8.0
+    property number  maxDist = 7.0
+    property string  hitRUID = ""   -- 피격 이펙트 RUID (SkillManager에서 주입)
+    property integer initDir = 0    -- 0=미초기화 / 1=오른쪽 / -1=왼쪽
 
-    -- BA_Bowmaster에서 스폰 직후 호출 (dir, 발사자 엔티티)
+    -- SkillManager.SpawnShuriken에서 스폰 직후 호출
     @ExecSpace("ServerOnly")
     method void Init(integer dir, Entity shooter)
         self._T.shooter = shooter
@@ -24,18 +24,17 @@ script BMArrowProjectile extends Component
         self.Entity.TransformComponent:Translate(self.initDir * moveD, 0)
         self._T.dist = self._T.dist + moveD
 
-        -- 최대 사거리 초과 → 소멸
         if self._T.dist >= self.maxDist then
             self._T.done = true
             self.Entity:Destroy()
             return
         end
 
-        -- 적 근접 체크 (발사자 제외)
         local myPos = self.Entity.TransformComponent.Position
+
         local hitR2 = 0.81  -- 반지름 0.9 유닛
 
-        -- 실제 플레이어 체크
+        -- 실제 플레이어 히트 체크
         for _, user in ipairs(_UserService.UserEntities.Values) do
             if isvalid(user) and user ~= self._T.shooter then
                 local tp = user.TransformComponent.Position
@@ -50,7 +49,7 @@ script BMArrowProjectile extends Component
 
         local map = self.Entity.CurrentMap
         if isvalid(map) then
-            -- 더미 엔티티 체크
+            -- 더미 히트 체크
             local dummies = map:GetChildComponentsByTypeName("script.DummyFighterComponent", true)
             for _, dc in ipairs(dummies) do
                 if isvalid(dc) then
@@ -104,7 +103,7 @@ script BMArrowProjectile extends Component
                 atk:AttackFrom(
                     Vector2(1.2, 1.2),
                     Vector2(pos.x, pos.y),
-                    "basic_bm"
+                    "basic_tf_shuriken"
                 )
             end
         end
@@ -120,7 +119,7 @@ script BMArrowProjectile extends Component
         if not isvalid(m) then return end
         _EffectService:PlayEffect(
             self.hitRUID, m,
-            Vector3(px, py, pz), 0, Vector3(1, 1, 1), false,
+            Vector3(px, py, pz), 0, Vector3(0.8, 0.8, 1), false,
             { SortingLayer = "Character", OrderInLayer = 10 }
         )
     end

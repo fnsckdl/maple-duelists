@@ -1,4 +1,4 @@
-@Component
+﻿@Component
 script SkillManager extends Component
 
     -- ════════════════════════════════════════════════════════════
@@ -82,6 +82,59 @@ script SkillManager extends Component
     property integer finalAimSerial   = -1
     property boolean finalAimIsEffect = false
 
+    -- ════════════════════════════════════════════════════════════
+    --  [섀도어] VFX / SFX RUID
+    -- ════════════════════════════════════════════════════════════
+    property string vfxRUID_TF_SavageBlow    = "895ac1e384ea42ca8dd084f54ff3346b"
+    property string sfxRUID_TF_SavageBlow    = "4cc1f2f305ce46b69a8c45129e9d0432"
+    property string vfxRUID_TF_DarkSight     = "abdf05be0b3e4146a6271c4ee1f3b1b1"
+    property string sfxRUID_TF_DarkSight     = "be18b6cf4ef54178b6bd2bde33bddd27"
+    property string vfxRUID_TF_Heist         = "410e6a09f8ec471f87bd8d55c34cc48d"
+    property string sfxRUID_TF_Heist         = "64795afda95e4b7dbdbdfe731e7d405a"
+    property string vfxRUID_TF_MesoExplosion = "61840689ea7b44f09f91960734232e34"
+    property string sfxRUID_TF_MesoExplosion = "acb0f70275b7422dbcc8a395cbbd9d28"
+    property string vfxRUID_TF_SmokeScreen   = "d703cc75584b4100af8a921f874b30b8"
+    property string sfxRUID_TF_SmokeScreen   = "ad63f4c64f304b6c876fb68511addb87"
+    property string vfxRUID_TF_Jeolle        = "3bb2063281f442c597a28bb32fede739"
+    property string sfxRUID_TF_Jeolle        = "540f3ba45a2c41f2b50029718093041e"
+    property string vfxRUID_TF_ShadowWorld   = "75e9e19b47544cf186a9c85cb0a856cc"
+    property string vfxRUID_TF_SonicBlow     = "96c839fe34124843ad494094d1e7d2db"
+    property string vfxRUID_TF_DoubleJump    = "1ebb7ff85f064bf985dea98d8acf5cfd"
+    property string sfxRUID_TF_DoubleJump    = "882f31f81cb94e6ba2973c3fe87272d3"
+    property string vfxRUID_TF_ShurikenFly   = "2b6de5c42f9e4741b9cd705eb710b5f7"
+    property string vfxRUID_TF_Assaulter     = ""
+    property string sfxRUID_TF_Assaulter     = ""
+    property string vfxRUID_TF_Assassinate   = ""
+    property string sfxRUID_TF_Assassinate   = ""
+
+    -- ════════════════════════════════════════════════════════════
+    --  [썬콜] VFX / SFX RUID
+    -- ════════════════════════════════════════════════════════════
+    property string vfxRUID_IL_MagicClaw       = "2a0d72e836fb4862aae83087035f3d2a"
+    property string vfxRUID_IL_IceStrike       = "7c9082f93eed42b5a083e84df4f77178"
+    property string vfxRUID_IL_ChainLightning  = "fa693d02e71841b2bf541bcdbdd84242"
+    property string vfxRUID_IL_LightningBolt   = "7b1fbc817b9a478e9f5c384dfc1a7176"
+    property string vfxRUID_IL_Blizzard        = "f37eef78d42f4fc19b3d422069bf8147"
+    property string vfxRUID_IL_Elquines        = "ec7f28f77ec3444c9c2f8e3c11c4e925"
+    property string vfxRUID_IL_Infinity        = "1140322cfd5a4c40b1134e1159245059"
+    property string vfxRUID_IL_FrozenLightning = ""
+    property string vfxRUID_IL_ColdBeam        = ""
+    property string vfxRUID_IL_MagicGuard      = ""
+    property string vfxRUID_IL_Teleport        = ""
+    property string vfxRUID_IL_TeleportMastery = ""
+    property string vfxRUID_IL_IceAge          = ""
+    property string vfxRUID_IL_ArcThunder      = ""
+    property string vfxRUID_IL_OverloadMana    = "b79bf157adf9421cbe25942f9003284a"
+    property string sfxRUID_IL_OverloadMana    = "505f047f3dbc435484ead6ca2cf89dae"
+    property string sfxRUID_IL_Teleport        = "4c1eb6001e9c47eda239cc58443b79cd"
+    property string sfxRUID_IL_Lightning       = "3c837a89f39e4e038b0a3a378de9a377"
+    property string sfxRUID_IL_Ice             = "452571b69b534d91a993de876f3c7887"
+    property string sfxRUID_IL_Elquines        = "9cd912e261bd4b72bd3113d7c8cbc6ed"
+    property string sfxRUID_IL_ArcThunder      = ""
+
+    -- 엘퀴네스 자동공격 타이머 ID
+    property integer elquinesTimerId = 0
+
     -- ─── 내부 유틸 ────────────────────────────────────────────
 
     method integer LookDir()
@@ -138,20 +191,35 @@ script SkillManager extends Component
         if fc == nil then return end
         ---@type FighterComponent
         local f = fc
-        f.SkillMaxCDs[slot] = cd
-        f.SkillCDs[slot]    = cd
+        -- 썬콜 InfinityBuff 적용: 쿨타임 50% 단축
+        local finalCD = (f.InfinityBuff and cd > 0) and (cd * 0.5) or cd
+        f.SkillMaxCDs[slot] = finalCD
+        f.SkillCDs[slot]    = finalCD
     end
 
     -- ─── 외부 진입점 (FighterInput에서 호출) ─────────────────
 
     @ExecSpace("ServerOnly")
     method void ExecuteBasicAttack()
-        if self:GetJobClass() == 1 then self:BA_Bowmaster() else self:BA_Hero() end
+        local now = _UtilLogic.ElapsedSeconds
+        if self._T.lastBATime ~= nil and (now - self._T.lastBATime) < 0.5 then return end
+        self._T.lastBATime = now
+        local jc = self:GetJobClass()
+        if     jc == 1 then self:BA_Bowmaster()
+        elseif jc == 2 then self:BA_Shadower()
+        elseif jc == 3 then self:BA_Mage()
+        else                self:BA_Hero()
+        end
     end
 
     @ExecSpace("ServerOnly")
     method void ExecuteSkillSlot(integer slot)
-        if self:GetJobClass() == 1 then self:BM_SkillDispatch(slot) else self:Hero_SkillDispatch(slot) end
+        local jc = self:GetJobClass()
+        if     jc == 1 then self:BM_SkillDispatch(slot)
+        elseif jc == 2 then self:Shadower_SkillDispatch(slot)
+        elseif jc == 3 then self:Mage_SkillDispatch(slot)
+        else                self:Hero_SkillDispatch(slot)
+        end
     end
 
     @ExecSpace("ServerOnly")
@@ -161,15 +229,53 @@ script SkillManager extends Component
         if atkComp == nil then return end
         ---@type AttackComponent
         local atk = atkComp
-        if self:GetJobClass() == 1 then
+        local jc = self:GetJobClass()
+        if jc == 1 then
             atk:Attack(Vector2(15.0, 0.8), Vector2(dir * 6.0, 0.0), "origin")
             self:VFX_FAOrigin(dir)
             log("[SkillMgr] 파이널 에임 오리진!")
+        elseif jc == 2 then
+            self:TF_SonicBlow()
+            log("[SkillMgr] 소닉 블로우 오리진!")
+        elseif jc == 3 then
+            self:IL_FrozenLightning()
+            log("[SkillMgr] 프로즌 라이트닝 오리진!")
         else
             atk:Attack(Vector2(12.8, 7.2), Vector2(0, 0), "origin")
             self:VFX_SpiritCaliber(dir)
             log("[SkillMgr] 스피릿 칼리버!")
         end
+    end
+
+    -- ─── 섀도어 플래시 점프 진입점 (공중 Alt 2회 / 슬롯11 CD 5.0s) ─
+    @ExecSpace("ServerOnly")
+    method void ExecuteFlashJump()
+        local fc = self:GetFC()
+        if fc == nil then return end
+        ---@type FighterComponent
+        local f = fc
+        if f.SkillCDs[11] ~= nil and f.SkillCDs[11] > 0 then
+            log("[SkillMgr] 플래시 점프 쿨타임 중: " .. string.format("%.1f", f.SkillCDs[11]) .. "s")
+            return
+        end
+        f.SkillCDs[11]    = 5.0
+        f.SkillMaxCDs[11] = 5.0
+        self:UseFlashJump()
+    end
+
+    -- ─── 썬콜 텔레포트 진입점 (Shift+방향 / 슬롯12 CD 2.0s) ────────
+    @ExecSpace("ServerOnly")
+    method void ExecuteTeleportSkill(integer dirH, integer dirV)
+        local fc = self:GetFC()
+        if fc == nil then return end
+        ---@type FighterComponent
+        local f = fc
+        if f.SkillCDs[12] ~= nil and f.SkillCDs[12] > 0 then
+            log("[SkillMgr] 텔레포트 쿨타임 중: " .. string.format("%.1f", f.SkillCDs[12]) .. "s")
+            return
+        end
+        self:SetSkillCD(12, 2.0)
+        self:UseTeleport(dirH, dirV)
     end
 
     -- ══════════════════════════════════════════════════════════
@@ -563,10 +669,8 @@ script SkillManager extends Component
         local opts = { SortingLayer = "Character", OrderInLayer = order, FlipX = (dir < 0), Color = col }
         if vfxRuid ~= "" then
             _EffectService:PlayEffect(vfxRuid, self.Entity, wp, 0, Vector3(sx, sy, 1), false, opts)
-        else
-            _ParticleService:PlayBasicParticle(BasicParticleType.SparkExplosion, self.Entity, wp, 0, Vector3(sx, sy, 1), false, opts)
         end
-        if sfxRuid ~= "" then _SoundService:PlaySound(sfxRuid, 1.0) end
+        if sfxRuid ~= "" then _SoundService:PlaySound(sfxRuid, 0.5) end
     end
 
     -- ══════════════════════════════════════════════════════════
@@ -576,12 +680,12 @@ script SkillManager extends Component
 
     @ExecSpace("Multicast")
     method void SFX_BasicSwing()
-        if self.sfxRUID_BasicSwing ~= "" then _SoundService:PlaySound(self.sfxRUID_BasicSwing, 1.0) end
+        if self.sfxRUID_BasicSwing ~= "" then _SoundService:PlaySound(self.sfxRUID_BasicSwing, 0.5) end
     end
 
     @ExecSpace("Multicast")
     method void SFX_BasicHit()
-        if self.sfxRUID_BasicHit ~= "" then _SoundService:PlaySound(self.sfxRUID_BasicHit, 1.0) end
+        if self.sfxRUID_BasicHit ~= "" then _SoundService:PlaySound(self.sfxRUID_BasicHit, 0.5) end
     end
 
     @ExecSpace("Multicast")
@@ -659,7 +763,7 @@ script SkillManager extends Component
         else
             _ParticleService:PlayBasicParticle(BasicParticleType.PillarBurst, self.Entity, pos, 0, Vector3(1.2,1.2,1), false, bOpts)
         end
-        if self.sfxRUID_Valhalla ~= "" then _SoundService:PlaySound(self.sfxRUID_Valhalla, 1.0) end
+        if self.sfxRUID_Valhalla ~= "" then _SoundService:PlaySound(self.sfxRUID_Valhalla, 0.5) end
         local s = self.valhallaSerial
         local ie = self.valhallaIsEffect
         _TimerService:SetTimerOnce(function()
@@ -688,7 +792,7 @@ script SkillManager extends Component
                 _ParticleService:PlayBasicParticle(BasicParticleType.SparkRadialExplosion, self.Entity, bp, 0, Vector3(sc, sc, 1), false, sOpts)
             end
         end
-        if self.sfxRUID_SpiritCaliber ~= "" then _SoundService:PlaySound(self.sfxRUID_SpiritCaliber, 1.0) end
+        if self.sfxRUID_SpiritCaliber ~= "" then _SoundService:PlaySound(self.sfxRUID_SpiritCaliber, 0.5) end
     end
 
     -- ══════════════════════════════════════════════════════════
@@ -750,8 +854,8 @@ script SkillManager extends Component
                 Vector3(base.x + dir * 3.5 * sc, base.y + 0.3, base.z),
                 0, Vector3(1.0*sc, 0.8*sc, 1), false, opts)
         end
-        if self.sfxRUID_BM_Sniping  ~= "" then _SoundService:PlaySound(self.sfxRUID_BM_Sniping,  1.0) end
-        if self.sfxRUID_BM_SniperHit ~= "" then _SoundService:PlaySound(self.sfxRUID_BM_SniperHit, 1.0) end
+        if self.sfxRUID_BM_Sniping  ~= "" then _SoundService:PlaySound(self.sfxRUID_BM_Sniping, 0.5) end
+        if self.sfxRUID_BM_SniperHit ~= "" then _SoundService:PlaySound(self.sfxRUID_BM_SniperHit, 0.5) end
     end
 
     -- ── 피어싱 폭풍: 플레이어 위치에서 발생, 전방으로 뻗어나감 ──
@@ -774,7 +878,7 @@ script SkillManager extends Component
         if self.vfxRUID_BM_ArrowBall ~= "" then
             _EffectService:PlayEffectAttached(self.vfxRUID_BM_ArrowBall, arrowEnt, Vector3(0,0,0), 0, Vector3(0.6,0.6,1), true, opts)
         end
-        if self.sfxRUID_BM_BasicSwing ~= "" then _SoundService:PlaySound(self.sfxRUID_BM_BasicSwing, 1.0) end
+        if self.sfxRUID_BM_BasicSwing ~= "" then _SoundService:PlaySound(self.sfxRUID_BM_BasicSwing, 0.5) end
     end
 
     -- ── 볼트 스위프: 부채꼴 3점 (커스텀 — 다중 위치) ──────────
@@ -801,7 +905,7 @@ script SkillManager extends Component
                 _ParticleService:PlayBasicParticle(BasicParticleType.SparkLoop, self.Entity, p, 0, Vector3(1.2*sc, 0.5*sc, 1), false, opts)
             end
         end
-        if self.sfxRUID_BM_BoltSweep ~= "" then _SoundService:PlaySound(self.sfxRUID_BM_BoltSweep, 1.0) end
+        if self.sfxRUID_BM_BoltSweep ~= "" then _SoundService:PlaySound(self.sfxRUID_BM_BoltSweep, 0.5) end
     end
 
     -- ── 스나이핑 조준선: 회전 90도 레이저 (커스텀) ─────────────
@@ -830,7 +934,7 @@ script SkillManager extends Component
             _ParticleService:PlayBasicParticle(BasicParticleType.SparkLoop, self.Entity, Vector3(split.x, split.y+0.5, split.z), 0, Vector3(0.4*sc,0.2,1), false, opts)
             _ParticleService:PlayBasicParticle(BasicParticleType.SparkLoop, self.Entity, Vector3(split.x+dir*0.3*sc, split.y-0.3, split.z), 0, Vector3(0.4*sc,0.2,1), false, opts)
         end
-        if self.sfxRUID_BM_SplitArrow ~= "" then _SoundService:PlaySound(self.sfxRUID_BM_SplitArrow, 1.0) end
+        if self.sfxRUID_BM_SplitArrow ~= "" then _SoundService:PlaySound(self.sfxRUID_BM_SplitArrow, 0.5) end
     end
 
     -- ── 파이널 에임 버프: 루프 부착 (커스텀) ───────────────────
@@ -842,7 +946,7 @@ script SkillManager extends Component
         end
         local aOpts = { SortingLayer = "Character", OrderInLayer = 3, Color = Color(0.4, 0.9, 1, 0.85) }
         self.finalAimSerial = _EffectService:PlayEffectAttached(self.vfxRUID_BM_FinalAim, self.Entity, Vector3(0,0,0), 0, Vector3(0.5,0.5,1), true, aOpts)
-        if self.sfxRUID_BM_FinalAim ~= "" then _SoundService:PlaySound(self.sfxRUID_BM_FinalAim, 1.0) end
+        if self.sfxRUID_BM_FinalAim ~= "" then _SoundService:PlaySound(self.sfxRUID_BM_FinalAim, 0.5) end
         local s = self.finalAimSerial
         _TimerService:SetTimerOnce(function()
             if s > 0 then _EffectService:RemoveEffect(s) end
@@ -863,6 +967,810 @@ script SkillManager extends Component
         local cOpts = { SortingLayer = "Character", OrderInLayer = 18, Color = Color(0.2, 0.8, 1, 1) }
         _ParticleService:PlayBasicParticle(BasicParticleType.LightningBlast,           self.Entity, pos,    0, Vector3(2*sc, 2*sc, 1),   false, cOpts)
         _ParticleService:PlayBasicParticle(BasicParticleType.LightningStrikeSharpTall, self.Entity, hitPos, 0, Vector3(0.3*sc, 5*sc, 1), false, cOpts)
-        if self.sfxRUID_FAOrigin ~= "" then _SoundService:PlaySound(self.sfxRUID_FAOrigin, 1.0) end
+        if self.sfxRUID_FAOrigin ~= "" then _SoundService:PlaySound(self.sfxRUID_FAOrigin, 0.5) end
+    end
+
+    -- ══════════════════════════════════════════════════════════
+    --  섀도어 스킬 구현
+    -- ══════════════════════════════════════════════════════════
+
+    @ExecSpace("ServerOnly")
+    method void BA_Shadower()
+        local dir = self:LookDir()
+        local atkComp = self:GetAtk()
+        for i = 1, 2 do
+            if atkComp ~= nil then
+                ---@type AttackComponent
+                local atk = atkComp
+                atk:Attack(Vector2(0.7, 0.8), Vector2(dir * 0.4, 0.2), "basic")
+            end
+            if i < 2 then wait(0.08) end
+        end
+        self:SpawnShuriken(dir)
+        log("[SkillMgr] 섀도어 기본공격 2연타 + 표창")
+    end
+
+    -- 표창 투사체 스폰 (2연타 직후 발사)
+    @ExecSpace("ServerOnly")
+    method void SpawnShuriken(integer dir)
+        local pos = self.Entity.TransformComponent.Position
+        local map = self.Entity.CurrentMap
+        if not isvalid(map) then return end
+        if self._T.shurikenCount == nil then self._T.shurikenCount = 0 end
+        self._T.shurikenCount = self._T.shurikenCount + 1
+        local spawnPos = Vector3(pos.x + dir * 0.4, pos.y + 0.25, pos.z)
+        local shuriken = _SpawnService:SpawnByModelId(
+            "tfshuriken",
+            "tf_shuriken_" .. tostring(self._T.shurikenCount),
+            spawnPos,
+            map
+        )
+        if isvalid(shuriken) then
+            shuriken:AddComponent("script.TFShurikenProjectile")
+            local proj = shuriken:GetComponent("script.TFShurikenProjectile")
+            if proj ~= nil then
+                ---@type TFShurikenProjectile
+                local p = proj
+                p.hitRUID = self.vfxRUID_TF_SavageBlow
+                p:Init(dir, self.Entity)
+            end
+            self:VFX_TF_ShurikenLaunch(dir, shuriken)
+        end
+        log("[SkillMgr] 표창 발사 dir=" .. tostring(dir))
+    end
+
+    -- 표창 비행 VFX: 엔티티에 회전 애니메이션 부착
+    @ExecSpace("Multicast")
+    method void VFX_TF_ShurikenLaunch(integer dir, Entity shurikenEnt)
+        if not isvalid(shurikenEnt) then return end
+        local opts = { SortingLayer = "Character", OrderInLayer = 7, FlipX = (dir < 0) }
+        if self.vfxRUID_TF_ShurikenFly ~= "" then
+            _EffectService:PlayEffectAttached(
+                self.vfxRUID_TF_ShurikenFly, shurikenEnt,
+                Vector3(0, 0, 0), 0, Vector3(0.4, 0.4, 1), true, opts
+            )
+        end
+    end
+
+    @ExecSpace("ServerOnly")
+    method void Shadower_SkillDispatch(integer slot)
+        -- X=1(스틸)  C=2(다크사이트)  Z=3(새비지블로우)  F=4(헤이스트)
+        -- Q=5(어썰터)  E=6(메소익스플로전)
+        -- 1=7(부메랑스텝)  2=8(연막탄)  3=9(절개)  4=10(멸귀참영진)
+        -- V=11(소닉블로우)
+        if     slot == 1  then self:SetSkillCD(1,  3.0);  self:TF_Stele()
+        elseif slot == 2  then self:SetSkillCD(2,  8.0);  self:TF_DarkSight()
+        elseif slot == 3  then                             self:TF_SavageBlow()
+        elseif slot == 4  then self:SetSkillCD(4, 12.0);  self:TF_Heist()
+        elseif slot == 5  then self:SetSkillCD(5,  6.0);  self:TF_Assaulter()
+        elseif slot == 6  then self:SetSkillCD(6,  6.0);  self:TF_MesoExplosion()
+        elseif slot == 7  then self:SetSkillCD(7,  5.0);  self:TF_BoomerangStep()
+        elseif slot == 8  then self:SetSkillCD(8, 15.0);  self:TF_SmokeScreen()
+        elseif slot == 9  then self:SetSkillCD(9, 12.0);  self:TF_Jeolle()
+        elseif slot == 10 then self:SetSkillCD(10,20.0);  self:TF_ShadowWorldSword()
+        elseif slot == 11 then self:SetSkillCD(11,30.0);  self:TF_SonicBlow()
+        end
+    end
+
+    -- [X] 새비지 블로우: 초근접 6연타 쿨타임 없음
+    @ExecSpace("ServerOnly")
+    method void TF_SavageBlow()
+        local dir = self:LookDir()
+        local atkComp = self:GetAtk()
+        for i = 1, 6 do
+            if atkComp ~= nil then
+                ---@type AttackComponent
+                local atk = atkComp
+                atk:Attack(Vector2(0.6, 0.7), Vector2(dir * 0.3, 0.1), "savage_blow")
+            end
+            self:VFX_TF_BasicHit(dir)
+            if i < 6 then wait(0.06) end
+        end
+        log("[SkillMgr] 새비지 블로우 6연타")
+    end
+
+    -- [Z] 다크사이트: 1.5초간 투사체·마법 계열 면역 (CD 8.0s)
+    @ExecSpace("ServerOnly")
+    method void TF_DarkSight()
+        local fc = self:GetFC()
+        if fc ~= nil then
+            ---@type FighterComponent
+            local f = fc
+            f:ActivateDarkSight(1.5)
+        end
+        self:VFX_TF_DarkSight()
+        log("[SkillMgr] 다크사이트 (1.5초 투사체 면역)")
+    end
+
+    -- [C] 헤이스트: 5초간 이동속도 1.5배 버프 (CD 12.0s)
+    @ExecSpace("ServerOnly")
+    method void TF_Heist()
+        local fc = self:GetFC()
+        if fc ~= nil then
+            ---@type FighterComponent
+            local f = fc
+            f:ActivateHeist(5.0)
+        end
+        self:VFX_TF_Heist()
+        log("[SkillMgr] 헤이스트 (이속 1.5배 5초)")
+    end
+
+    -- [V] 어썰터: 적 후방 순간이동 후 관통 타격 (CD 6.0s)
+    @ExecSpace("ServerOnly")
+    method void TF_Assaulter()
+        local dir = self:LookDir()
+        -- 적 앞 0.8유닛으로 이동
+        local oppEnt = self:GetOpponentEntity()
+        if isvalid(oppEnt) then
+            local oppPos = oppEnt.TransformComponent.WorldPosition
+            local arrivalX = oppPos.x - dir * 0.8
+            local myPos = self.Entity.TransformComponent.WorldPosition
+            _TeleportService:TeleportToMapPosition(self.Entity, Vector3(arrivalX, myPos.y, myPos.z), "")
+        end
+        wait(0.08)
+        local atkComp = self:GetAtk()
+        if atkComp ~= nil then
+            ---@type AttackComponent
+            local atk = atkComp
+            atk:Attack(Vector2(1.2, 1.0), Vector2(dir * 0.6, 0.2), "assaulter")
+        end
+        self:VFX_TF_Assaulter(dir)
+        log("[SkillMgr] 어썰터 (순간이동 기습)")
+    end
+
+    -- [S] 부메랑 스텝: 전방 원형 투척 + 귀환 넉백 (CD 5.0s)
+    @ExecSpace("ServerOnly")
+    method void TF_BoomerangStep()
+        local dir = self:LookDir()
+        local atkComp = self:GetAtk()
+        if atkComp ~= nil then
+            ---@type AttackComponent
+            local atk = atkComp
+            -- 전방 투척
+            atk:Attack(Vector2(3.5, 0.9), Vector2(dir * 1.8, 0.2), "boomerang")
+            wait(0.2)
+            -- 귀환 (반대 방향)
+            atk:Attack(Vector2(3.5, 0.9), Vector2(-dir * 1.8, 0.2), "boomerang_return")
+        end
+        log("[SkillMgr] 부메랑 스텝 (왕복 넉백)")
+    end
+
+    -- [Shift] 스틸: 전방 돌진 베기 (CD 3.0s)
+    @ExecSpace("ServerOnly")
+    method void TF_Stele()
+        local dir = self:LookDir()
+        local body = self.Entity.RigidbodyComponent
+        if isvalid(body) then body:AddForce(Vector2(dir * 10, 0)) end
+        wait(0.12)
+        local atkComp = self:GetAtk()
+        if atkComp ~= nil then
+            ---@type AttackComponent
+            local atk = atkComp
+            atk:Attack(Vector2(1.4, 1.0), Vector2(dir * 0.7, 0.2), "stele")
+        end
+        log("[SkillMgr] 스틸 (돌진 베기)")
+    end
+
+    -- [A] 메소 익스플로전: 동전 폭발 + 에어본 (CD 6.0s)
+    @ExecSpace("ServerOnly")
+    method void TF_MesoExplosion()
+        local dir = self:LookDir()
+        local atkComp = self:GetAtk()
+        if atkComp ~= nil then
+            ---@type AttackComponent
+            local atk = atkComp
+            atk:Attack(Vector2(2.2, 1.8), Vector2(dir * 0.3, 0.5), "meso_explosion")
+        end
+        self:VFX_TF_MesoExplosion(dir)
+        log("[SkillMgr] 메소 익스플로전 (폭발+에어본)")
+    end
+
+    -- [D] 연막탄: 1초간 무적 + 반투명 은신 (CD 15.0s)
+    @ExecSpace("ServerOnly")
+    method void TF_SmokeScreen()
+        local fc = self:GetFC()
+        if fc ~= nil then
+            ---@type FighterComponent
+            local f = fc
+            f:ActivateInvincible(1.0)
+        end
+        self:VFX_TF_SmokeScreen()
+        log("[SkillMgr] 연막탄 (1초 무적 은신)")
+    end
+
+    -- [F] 절개: 적 후방으로 순간이동 후 2연격 기습 (CD 12.0s)
+    @ExecSpace("ServerOnly")
+    method void TF_Jeolle()
+        local dir = self:LookDir()
+        local oppEnt = self:GetOpponentEntity()
+        if isvalid(oppEnt) then
+            local oppPos = oppEnt.TransformComponent.WorldPosition
+            local myPos  = self.Entity.TransformComponent.WorldPosition
+            _TeleportService:TeleportToMapPosition(self.Entity, Vector3(oppPos.x + dir * 1.0, myPos.y, myPos.z), "")
+        end
+        wait(0.05)
+        local atkComp = self:GetAtk()
+        if atkComp ~= nil then
+            ---@type AttackComponent
+            local atk = atkComp
+            atk:Attack(Vector2(0.9, 0.9), Vector2(dir * 0.4, 0.2), "jeolle")
+            self:VFX_TF_Jeolle(dir)
+            wait(0.1)
+            atk:Attack(Vector2(1.5, 1.2), Vector2(dir * 0.7, 0.3), "jeolle_finish")
+            self:VFX_TF_Jeolle(dir)
+        end
+        log("[SkillMgr] 절개 (뒤잡기 2연격)")
+    end
+
+    -- [Space] 멸귀참영진: 전 화면 6연 고속 난무 (CD 20.0s)
+    @ExecSpace("ServerOnly")
+    method void TF_ShadowWorldSword()
+        local dir = self:LookDir()
+        local atkComp = self:GetAtk()
+        self:VFX_TF_ShadowWorld(dir)
+        for i = 1, 6 do
+            if atkComp ~= nil then
+                ---@type AttackComponent
+                local atk = atkComp
+                local ox = (i % 2 == 0) and (dir * 1.5) or (dir * 0.8)
+                local oy = (i % 3 == 0) and 0.8 or (i % 3 == 1 and 0.0 or -0.4)
+                atk:Attack(Vector2(8.0, 5.0), Vector2(ox, oy), "shadow_world")
+            end
+            if i < 6 then wait(0.12) end
+        end
+        log("[SkillMgr] 멸귀참영진 (전 화면 6연 난무)")
+    end
+
+    -- [Q] 소닉 블로우: 적 앞 순간이동 + 15연타 오리진 필살기 (CD 30.0s)
+    @ExecSpace("ServerOnly")
+    method void TF_SonicBlow()
+        local dir = self:LookDir()
+        local oppEnt = self:GetOpponentEntity()
+        if isvalid(oppEnt) then
+            local oppPos = oppEnt.TransformComponent.WorldPosition
+            local myPos  = self.Entity.TransformComponent.WorldPosition
+            -- 경직: 시전 첫 프레임에 전방 적 0.3s 강제 경직
+            local oppFC = oppEnt:GetComponent("script.FighterComponent")
+            if oppFC ~= nil then
+                ---@type FighterComponent
+                local of = oppFC
+                of:ApplyStun(0.3)
+            end
+            _TeleportService:TeleportToMapPosition(self.Entity, Vector3(oppPos.x - dir * 0.7, myPos.y, myPos.z), "")
+        end
+        wait(0.05)
+        self:VFX_TF_SonicBlow(dir)
+        local atkComp = self:GetAtk()
+        for i = 1, 15 do
+            if atkComp ~= nil then
+                ---@type AttackComponent
+                local atk = atkComp
+                local power = (i == 15) and 3.0 or 1.0
+                atk:Attack(Vector2(0.8 * power, 0.8 * power), Vector2(dir * 0.4, 0.1), "sonic_blow")
+            end
+            if i < 15 then wait(0.04) end
+        end
+        log("[SkillMgr] 소닉 블로우 15연타!")
+    end
+
+    -- [Alt×2] 플래시 점프: 전방+상방 공중 대시 (CD 5.0s, ExecuteFlashJump에서 진입)
+    @ExecSpace("ServerOnly")
+    method void UseFlashJump()
+        local dir = self:LookDir()
+        local body = self.Entity.RigidbodyComponent
+        if isvalid(body) then
+            body:AddForce(Vector2(dir * 3, 0.8))
+        end
+        self:VFX_TF_DoubleJump(dir)
+        log("[SkillMgr] 플래시 점프 dir=" .. tostring(dir))
+    end
+
+    -- ══════════════════════════════════════════════════════════
+    --  썬콜 스킬 구현
+    -- ══════════════════════════════════════════════════════════
+
+    @ExecSpace("ServerOnly")
+    method void BA_Mage()
+        local dir = self:LookDir()
+        local atkComp = self:GetAtk()
+        for i = 1, 2 do
+            if atkComp ~= nil then
+                ---@type AttackComponent
+                local atk = atkComp
+                atk:Attack(Vector2(2.8, 0.7), Vector2(dir * 1.4, 0.2), "basic")
+            end
+            self:VFX_IL_BasicBolt(dir)
+            if i < 2 then wait(0.08) end
+        end
+        log("[SkillMgr] 매직 클로 2연격")
+    end
+
+    @ExecSpace("ServerOnly")
+    method void Mage_SkillDispatch(integer slot)
+        -- X=1(아이스 스트라이크)  C=2(체인 라이트닝)  Z=3(썬더 볼트)  F=4(블리자드)
+        -- Q=5(글레이셜 체인, CD 6s)  E=6(엘퀴네스, CD 15s)  1=7(인피니티, CD 25s)
+        -- 2=8(콜드 빔, CD 5s)  3=9(매직 가드, CD 15s)
+        -- V=11(프로즌 라이트닝, CD 50s)  Shift=텔레포트
+        if     slot == 1  then                             self:IL_IceStrike()
+        elseif slot == 2  then self:SetSkillCD(2,  3.0);  self:IL_ChainLightning()
+        elseif slot == 3  then                             self:IL_ThunderBolt()
+        elseif slot == 4  then self:SetSkillCD(4, 20.0);  self:IL_Blizzard()
+        elseif slot == 5  then self:SetSkillCD(5,  6.0);  self:IL_GlacialChain()
+        elseif slot == 6  then self:SetSkillCD(6, 15.0);  self:IL_Elquines()
+        elseif slot == 7  then self:SetSkillCD(7, 25.0);  self:IL_Infinity()
+        elseif slot == 8  then self:SetSkillCD(8,  5.0);  self:IL_ColdBeam()
+        elseif slot == 9  then self:SetSkillCD(9, 15.0);  self:IL_MagicGuard()
+        elseif slot == 10 then self:SetSkillCD(10,20.0);  self:IL_OverloadMana()
+        elseif slot == 11 then self:SetSkillCD(11,50.0);  self:IL_FrozenLightning()
+        end
+    end
+
+    -- [Z] 썬더 볼트: 자신 중심 원형 방전 (CD없음)
+    @ExecSpace("ServerOnly")
+    method void IL_ThunderBolt()
+        local dir = self:LookDir()
+        local atkComp = self:GetAtk()
+        if atkComp ~= nil then
+            ---@type AttackComponent
+            local atk = atkComp
+            -- 좌우 양방향 동시 히트박스
+            atk:Attack(Vector2(2.5, 2.0), Vector2(0, 0), "thunder_bolt")
+        end
+        self:VFX_IL_LightningBolt(dir)
+        log("[SkillMgr] 썬더 볼트 (원형 방전)")
+    end
+
+    -- [X] 아이스 스트라이크: 전방 짧은 범위 (CD없음)
+    @ExecSpace("ServerOnly")
+    method void IL_IceStrike()
+        local dir = self:LookDir()
+        local atkComp = self:GetAtk()
+        if atkComp ~= nil then
+            ---@type AttackComponent
+            local atk = atkComp
+            atk:Attack(Vector2(2.2, 1.6), Vector2(dir * 0.8, 0.3), "ice_strike")
+        end
+        self:VFX_IL_IceStrike(dir)
+        log("[SkillMgr] 아이스 스트라이크")
+    end
+
+    -- [C] 체인 라이트닝: 유도 추격 3연타 (CD 3.0s)
+    @ExecSpace("ServerOnly")
+    method void IL_ChainLightning()
+        local dir = self:LookDir()
+        local atkComp = self:GetAtk()
+        for i = 1, 3 do
+            if atkComp ~= nil then
+                ---@type AttackComponent
+                local atk = atkComp
+                atk:Attack(Vector2(3.5 + i * 0.3, 0.9), Vector2(dir * (1.5 + i * 0.3), 0.2), "chain_lightning")
+            end
+            self:VFX_IL_ChainHit(dir, i)
+            if i < 3 then wait(0.1) end
+        end
+        log("[SkillMgr] 체인 라이트닝 추격 3타")
+    end
+
+    -- [A] 글레이셜 체인: 얼음 사슬로 적을 내 앞으로 끌어당김 (CD 6.0s)
+    @ExecSpace("ServerOnly")
+    method void IL_GlacialChain()
+        local dir = self:LookDir()
+        local atkComp = self:GetAtk()
+        if atkComp ~= nil then
+            ---@type AttackComponent
+            local atk = atkComp
+            atk:Attack(Vector2(4.5, 0.8), Vector2(dir * 2.0, 0.2), "glacial_chain")
+        end
+        -- 적을 내 앞으로 끌어당김 (속도 초기화 후 시전자 발판 Y 기준 이동)
+        local oppEnt = self:GetOpponentEntity()
+        if isvalid(oppEnt) then
+            local oppBody = oppEnt.RigidbodyComponent
+            if isvalid(oppBody) then
+                oppBody:SetForce(Vector2(0, 0))
+            end
+            local myPos = self.Entity.TransformComponent.WorldPosition
+            local pullX = myPos.x + dir * 1.5
+            _TeleportService:TeleportToMapPosition(oppEnt, Vector3(pullX, myPos.y, myPos.z), "")
+        end
+        log("[SkillMgr] 글레이셜 체인 (적 끌어당김)")
+    end
+
+    -- [S] 엘퀴네스: 얼음 정령 소환 — 8초간 범위 내 적 자동 얼음 화살 (CD 15.0s)
+    @ExecSpace("ServerOnly")
+    method void IL_Elquines()
+        local fc = self:GetFC()
+        if fc ~= nil then
+            ---@type FighterComponent
+            local f = fc
+            f:ActivateElquines(8.0)
+        end
+        -- 기존 타이머 정리 후 1.5초 주기 자동공격 시작
+        if self.elquinesTimerId ~= 0 then
+            _TimerService:ClearTimer(self.elquinesTimerId)
+            self.elquinesTimerId = 0
+        end
+        self.elquinesTimerId = _TimerService:SetTimerRepeat(function() self:ElquinesAutoAttack() end, 1.5)
+        self:VFX_IL_Elquines()
+        _TimerService:SetTimerOnce(function()
+            if self.elquinesTimerId ~= 0 then
+                _TimerService:ClearTimer(self.elquinesTimerId)
+                self.elquinesTimerId = 0
+            end
+            local fc2 = self:GetFC()
+            if fc2 ~= nil then
+                ---@type FighterComponent
+                local f2 = fc2
+                f2.ElquinesActive = false
+                f2.ElquinesTimer  = 0
+            end
+        end, 8.0)
+        log("[SkillMgr] 엘퀴네스 소환 (8초 자동공격)")
+    end
+
+    -- 엘퀴네스 주기적 자동공격 (1.5초마다 거리 내 적 타격)
+    @ExecSpace("ServerOnly")
+    method void ElquinesAutoAttack()
+        local fc = self:GetFC()
+        if fc == nil then return end
+        ---@type FighterComponent
+        local f = fc
+        if not f.ElquinesActive then return end
+        local oppEnt = self:GetOpponentEntity()
+        if not isvalid(oppEnt) then return end
+        local myPos  = self.Entity.TransformComponent.WorldPosition
+        local oppPos = oppEnt.TransformComponent.WorldPosition
+        local dx = oppPos.x - myPos.x
+        local dy = oppPos.y - myPos.y
+        if (dx * dx + dy * dy) > 16.0 then return end  -- 4유닛 반경 밖이면 패스
+        local dir = (dx >= 0) and 1 or -1
+        local atkComp = self:GetAtk()
+        if atkComp ~= nil then
+            ---@type AttackComponent
+            local atk = atkComp
+            atk:Attack(Vector2(0.7, 0.6), Vector2(dir * 0.4, 0.2), "elquines_arrow")
+        end
+        log("[SkillMgr] 엘퀴네스 얼음 화살 발사")
+    end
+
+    -- [D] 인피니티: 5초간 모든 스킬 쿨타임 절반 단축 (CD 25.0s)
+    @ExecSpace("ServerOnly")
+    method void IL_Infinity()
+        local fc = self:GetFC()
+        if fc ~= nil then
+            ---@type FighterComponent
+            local f = fc
+            f:ActivateInfinity()
+        end
+        self:VFX_IL_Infinity()
+        log("[SkillMgr] 인피니티 (쿨타임 50% 5초)")
+    end
+
+    -- [F] 블리자드: 전 화면 궁극기 + 빙결(슬로우 5초) (CD 20.0s)
+    @ExecSpace("ServerOnly")
+    method void IL_Blizzard()
+        local atkComp = self:GetAtk()
+        if atkComp ~= nil then
+            ---@type AttackComponent
+            local atk = atkComp
+            atk:Attack(Vector2(12.8, 4.0), Vector2(0, 0.5), "blizzard")
+        end
+        local oppEnt = self:GetOpponentEntity()
+        if isvalid(oppEnt) then
+            local oppFC = oppEnt:GetComponent("script.FighterComponent")
+            if oppFC ~= nil then
+                ---@type FighterComponent
+                local of = oppFC
+                of:ApplySlow(5.0)
+            end
+        end
+        local dir = self:LookDir()
+        self:VFX_IL_Blizzard(dir)
+        log("[SkillMgr] 블리자드 (전 화면 빙결 궁극기)")
+    end
+
+    -- [2] 콜드 빔: 전방 원거리 얼음 투사체 + 슬로우 2초 (CD 5.0s)
+    @ExecSpace("ServerOnly")
+    method void IL_ColdBeam()
+        local dir = self:LookDir()
+        local atkComp = self:GetAtk()
+        if atkComp ~= nil then
+            ---@type AttackComponent
+            local atk = atkComp
+            atk:Attack(Vector2(5.0, 0.8), Vector2(dir * 4.0, 0.1), "cold_beam")
+        end
+        local oppEnt = self:GetOpponentEntity()
+        if isvalid(oppEnt) then
+            local oppFC = oppEnt:GetComponent("script.FighterComponent")
+            if oppFC ~= nil then
+                ---@type FighterComponent
+                local of = oppFC
+                of:ApplySlow(2.0)
+            end
+        end
+        self:VFX_IL_ColdBeam(dir)
+        log("[SkillMgr] 콜드 빔 (슬로우 2초)")
+    end
+
+    -- [3] 매직 가드: 5초간 피해 40% 감소 (CD 15.0s)
+    @ExecSpace("ServerOnly")
+    method void IL_MagicGuard()
+        local fc = self:GetFC()
+        if fc ~= nil then
+            ---@type FighterComponent
+            local f = fc
+            f:ActivateMagicGuard(5.0)
+        end
+        self:VFX_IL_MagicGuard()
+        log("[SkillMgr] 매직 가드 (5초 피해 40% 감소)")
+    end
+
+    -- [4] 오버로드 마나: HP 150 소모 → 5초간 공격력 1.5배 (CD 20.0s)
+    @ExecSpace("ServerOnly")
+    method void IL_OverloadMana()
+        local fc = self:GetFC()
+        if fc ~= nil then
+            ---@type FighterComponent
+            local f = fc
+            if f.HP <= 1 then
+                log("[SkillMgr] 오버로드 마나: HP 부족으로 발동 불가")
+                return
+            end
+            f:ActivateOverloadMana(150, 5.0)
+        end
+        self:VFX_IL_OverloadMana()
+        log("[SkillMgr] 오버로드 마나 (HP 150 소모, 5초간 1.5배)")
+    end
+
+    -- [V] 프로즌 라이트닝: 전 화면 얼음+번개 폭풍 + 3초 기절 (CD 50.0s)
+    @ExecSpace("ServerOnly")
+    method void IL_FrozenLightning()
+        local dir = self:LookDir()
+        local atkComp = self:GetAtk()
+        if atkComp ~= nil then
+            ---@type AttackComponent
+            local atk = atkComp
+            -- 경직: 시전 첫 프레임에 전방 적 0.3s 강제 경직
+        local oppEnt = self:GetOpponentEntity()
+        if isvalid(oppEnt) then
+            local oppFC = oppEnt:GetComponent("script.FighterComponent")
+            if oppFC ~= nil then
+                ---@type FighterComponent
+                local of = oppFC
+                of:ApplyStun(0.3)
+            end
+        end
+        atk:Attack(Vector2(12.8, 8.0), Vector2(0, 0), "frozen_lightning")
+        end
+        self:VFX_IL_FrozenLightning(dir)
+        log("[SkillMgr] 프로즌 라이트닝 (전 화면 빙결 기절 3초)")
+    end
+
+    -- [Shift+방향] 텔레포트: 입력 방향으로 순간이동 (CD 2.0s, ExecuteTeleportSkill에서 진입)
+    @ExecSpace("ServerOnly")
+    method void UseTeleport(integer dirH, integer dirV)
+        -- dirH: -1=왼쪽/0=중립(바라보는 방향)/1=오른쪽  dirV: -1=아래/0=중립/1=위
+        local pos    = self.Entity.TransformComponent.WorldPosition
+        local faceDir = self:LookDir()
+        local moveH   = (dirH ~= 0) and dirH or faceDir
+        local dx = moveH * 4.0
+        local dy = 0.0
+        if dirV == 1 then
+            dy = 3.0
+        elseif dirV == -1 then
+            dy = -2.0
+        end
+        local newPos = Vector3(pos.x + dx, pos.y + dy, pos.z)
+        _TeleportService:TeleportToMapPosition(self.Entity, newPos, "")
+        log("[SkillMgr] 텔레포트 dx=" .. dx .. " dy=" .. dy)
+    end
+
+    -- ══════════════════════════════════════════════════════════
+    --  섀도어 VFX (PlayVFX 통일 + 커스텀 혼용)
+    -- ══════════════════════════════════════════════════════════
+
+    @ExecSpace("Multicast")
+    method void VFX_TF_BasicHit(integer dir)
+        -- 기본공격 타격 스파크
+        self:PlayVFX(self.vfxRUID_TF_SavageBlow, "", dir, 0.5, 0.3, 0.7, 0.7, 10, Color(0.2, 0.2, 0.2, 1))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_TF_SavageBlow(integer dir)
+        -- 6연타 파편 이펙트 (다중 위치)
+        local pos  = self.Entity.TransformComponent.WorldPosition
+        local cs   = self.Entity.TransformComponent.Scale
+        local sc   = math.abs(cs.x)
+        local opts = { SortingLayer = "Character", OrderInLayer = 10, FlipX = (dir < 0), Color = Color(0.15, 0.15, 0.15, 1) }
+        for i = 1, 6 do
+            local bp = Vector3(pos.x + dir * (0.3 + i * 0.08) * sc, pos.y + 0.3, pos.z)
+            if self.vfxRUID_TF_SavageBlow ~= "" then
+                _EffectService:PlayEffect(self.vfxRUID_TF_SavageBlow, self.Entity, bp, 0, Vector3(0.5*sc, 0.5*sc, 1), false, opts)
+            end
+        end
+        if self.sfxRUID_TF_SavageBlow ~= "" then _SoundService:PlaySound(self.sfxRUID_TF_SavageBlow, 0.5) end
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_TF_Assaulter(integer dir)
+        -- 돌진 먼지 이펙트
+        self:PlayVFX(self.vfxRUID_TF_Assaulter, self.sfxRUID_TF_Assaulter, dir, 0.5, 0.3, 1.3, 0.8, 10, Color(0.1, 0.1, 0.1, 1))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_TF_MesoExplosion(integer dir)
+        self:PlayVFX(self.vfxRUID_TF_MesoExplosion, self.sfxRUID_TF_MesoExplosion, dir, 0.5, 0.5, 2.0, 2.0, 8, Color(1, 1, 1, 1))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_TF_Assassinate(integer dir)
+        -- 궁극기: 어둠 폭발 (다중 이펙트)
+        local pos  = self.Entity.TransformComponent.WorldPosition
+        local cs   = self.Entity.TransformComponent.Scale
+        local sc   = math.abs(cs.x)
+        local opts = { SortingLayer = "Character", OrderInLayer = 20, FlipX = (dir < 0), Color = Color(0.05, 0.05, 0.05, 1) }
+        if self.vfxRUID_TF_Assassinate ~= "" then
+            _EffectService:PlayEffect(self.vfxRUID_TF_Assassinate, self.Entity, pos, 0, Vector3(2*sc, 2*sc, 1), false, opts)
+        end
+        if self.sfxRUID_TF_Assassinate ~= "" then _SoundService:PlaySound(self.sfxRUID_TF_Assassinate, 0.5) end
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_TF_DoubleJump(integer dir)
+        -- 더블점프: 후방 잔상 이펙트
+        self:PlayVFX(self.vfxRUID_TF_DoubleJump, self.sfxRUID_TF_DoubleJump, dir, -0.3, -0.2, 1.2, 0.6, 5, Color(0.3, 0.3, 0.3, 0.8))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_TF_DarkSight()
+        self:PlayVFX(self.vfxRUID_TF_DarkSight, self.sfxRUID_TF_DarkSight, 1, 0.0, 0.5, 1.2, 1.2, 5, Color(1, 1, 1, 1))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_TF_SmokeScreen()
+        self:PlayVFX(self.vfxRUID_TF_SmokeScreen, self.sfxRUID_TF_SmokeScreen, 1, 0.0, 0.3, 1.5, 1.5, 6, Color(1, 1, 1, 1))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_TF_Heist()
+        local dir = self:LookDir()
+        self:PlayVFX(self.vfxRUID_TF_Heist, self.sfxRUID_TF_Heist, dir, 0.0, 0.0, 1.2, 1.2, 8, Color(1, 1, 1, 1))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_TF_Jeolle(integer dir)
+        self:PlayVFX(self.vfxRUID_TF_Jeolle, self.sfxRUID_TF_Jeolle, dir, 0.5, 0.3, 1.2, 1.2, 12, Color(1, 1, 1, 1))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_TF_ShadowWorld(integer dir)
+        self:PlayVFX(self.vfxRUID_TF_ShadowWorld, "", dir, 0.0, 0.0, 3.0, 3.0, 20, Color(1, 1, 1, 1))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_TF_SonicBlow(integer dir)
+        self:PlayVFX(self.vfxRUID_TF_SonicBlow, self.sfxRUID_TF_SavageBlow, dir, 0.5, 0.0, 2.5, 2.5, 22, Color(1, 1, 1, 1))
+    end
+
+    -- ══════════════════════════════════════════════════════════
+    --  썬콜 VFX (PlayVFX 통일 + 커스텀 혼용)
+    -- ══════════════════════════════════════════════════════════
+
+    @ExecSpace("Multicast")
+    method void VFX_IL_BasicBolt(integer dir)
+        self:PlayVFX(self.vfxRUID_IL_MagicClaw, "", dir, 1.2, 0.2, 0.9, 0.9, 10, Color(1, 1, 1, 1))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_IL_LightningBolt(integer dir)
+        -- 단일 번개
+        self:PlayVFX(self.vfxRUID_IL_LightningBolt, self.sfxRUID_IL_Lightning, dir, 2.0, 0.3, 1.2, 0.6, 10, Color(1.0, 1.0, 0.3, 1))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_IL_ChainHit(integer dir, integer bounce)
+        self:PlayVFX(self.vfxRUID_IL_ChainLightning, self.sfxRUID_IL_Lightning, dir, 1.5 + bounce * 0.5, 0.3, 0.8, 0.5, 10, Color(0.8, 1.0, 0.3, 1))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_IL_IceStrike(integer dir)
+        -- 얼음 파편 광역 이펙트
+        self:PlayVFX(self.vfxRUID_IL_IceStrike, self.sfxRUID_IL_Ice, dir, 0.5, 0.5, 2.0, 1.8, 8, Color(0.4, 0.8, 1, 1))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_IL_TeleportMastery(integer dir)
+        -- 착지 번개 이펙트
+        self:PlayVFX(self.vfxRUID_IL_TeleportMastery, self.sfxRUID_IL_Lightning, dir, 0.0, 0.5, 1.5, 1.5, 10, Color(0.5, 0.8, 1, 1))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_IL_Blizzard(integer dir)
+        -- 블리자드 광역 이펙트 (다중 파티클)
+        local pos  = self.Entity.TransformComponent.WorldPosition
+        local cs   = self.Entity.TransformComponent.Scale
+        local sc   = math.abs(cs.x)
+        local opts = { SortingLayer = "Character", OrderInLayer = 8, Color = Color(0.5, 0.8, 1, 0.9) }
+        if self.vfxRUID_IL_Blizzard ~= "" then
+            _EffectService:PlayEffect(self.vfxRUID_IL_Blizzard, self.Entity, pos, 0, Vector3(3*sc, 3*sc, 1), false, opts)
+        end
+        if self.sfxRUID_IL_Ice ~= "" then _SoundService:PlaySound(self.sfxRUID_IL_Ice, 0.5) end
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_IL_IceAge(integer dir)
+        -- 아이스 에이지 광역 이펙트
+        local pos  = self.Entity.TransformComponent.WorldPosition
+        local cs   = self.Entity.TransformComponent.Scale
+        local sc   = math.abs(cs.x)
+        local opts = { SortingLayer = "Character", OrderInLayer = 8, Color = Color(0.3, 0.7, 1, 1) }
+        if self.vfxRUID_IL_IceAge ~= "" then
+            _EffectService:PlayEffect(self.vfxRUID_IL_IceAge, self.Entity, pos, 0, Vector3(4*sc, 4*sc, 1), false, opts)
+        end
+        if self.sfxRUID_IL_Ice ~= "" then _SoundService:PlaySound(self.sfxRUID_IL_Ice, 0.5) end
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_IL_ArcThunder(integer dir)
+        -- 아크 선더 (강력한 낙뢰 연출)
+        local pos  = self.Entity.TransformComponent.WorldPosition
+        local cs   = self.Entity.TransformComponent.Scale
+        local sc   = math.abs(cs.x)
+        local opts = { SortingLayer = "Character", OrderInLayer = 20, FlipX = (dir < 0), Color = Color(0.6, 0.9, 1, 1) }
+        if self.vfxRUID_IL_ArcThunder ~= "" then
+            _EffectService:PlayEffect(self.vfxRUID_IL_ArcThunder, self.Entity, pos, 0, Vector3(3*sc, 3*sc, 1), false, opts)
+        end
+        if self.sfxRUID_IL_ArcThunder ~= "" then _SoundService:PlaySound(self.sfxRUID_IL_ArcThunder, 0.5) end
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_IL_TeleportCast(integer dir, Vector3 fromPos)
+        -- 텔레포트 출발 이펙트 (fromPos = 이동 전 위치)
+        local cs   = self.Entity.TransformComponent.Scale
+        local sc   = math.abs(cs.x)
+        local opts = { SortingLayer = "Character", OrderInLayer = 12, Color = Color(0.4, 0.8, 1, 0.9) }
+        if self.vfxRUID_IL_Teleport ~= "" then
+            _EffectService:PlayEffect(self.vfxRUID_IL_Teleport, self.Entity, fromPos, 0, Vector3(1.2*sc, 1.2*sc, 1), false, opts)
+        end
+        if self.sfxRUID_IL_Teleport ~= "" then _SoundService:PlaySound(self.sfxRUID_IL_Teleport, 0.5) end
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_IL_Elquines()
+        self:PlayVFX(self.vfxRUID_IL_Elquines, self.sfxRUID_IL_Elquines, 1, 0.0, 0.5, 2.0, 2.0, 6, Color(0.4, 0.9, 1.0, 0.9))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_IL_Infinity()
+        self:PlayVFX(self.vfxRUID_IL_Infinity, "", 1, 0.0, 0.5, 2.5, 2.5, 8, Color(1.0, 0.9, 0.3, 0.9))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_IL_ColdBeam(integer dir)
+        self:PlayVFX(self.vfxRUID_IL_ColdBeam, self.sfxRUID_IL_Ice, dir, 2.0, 0.1, 1.5, 0.6, 10, Color(0.3, 0.8, 1, 1))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_IL_MagicGuard()
+        self:PlayVFX(self.vfxRUID_IL_MagicGuard, "", 1, 0.0, 0.3, 1.8, 1.8, 15, Color(0.6, 0.8, 1, 0.8))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_IL_OverloadMana()
+        self:PlayVFX(self.vfxRUID_IL_OverloadMana, self.sfxRUID_IL_OverloadMana, 1, 0.0, 0.5, 2.0, 2.0, 16, Color(1.0, 0.4, 0.1, 0.9))
+    end
+
+    @ExecSpace("Multicast")
+    method void VFX_IL_FrozenLightning(integer dir)
+        self:PlayVFX(self.vfxRUID_IL_FrozenLightning, self.sfxRUID_IL_Lightning, dir, 0.0, 0.5, 4.0, 4.0, 22, Color(0.4, 0.9, 1.0, 1))
+        if self.sfxRUID_IL_Ice ~= "" then _SoundService:PlaySound(self.sfxRUID_IL_Ice, 0.5) end
+    end
+
+    @ExecSpace("ServerOnly")
+    method void OnEndPlay()
+        -- 엘퀴네스 타이머 누수 방지
+        if self.elquinesTimerId ~= 0 then
+            _TimerService:ClearTimer(self.elquinesTimerId)
+            self.elquinesTimerId = 0
+        end
     end
 end

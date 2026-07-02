@@ -33,6 +33,10 @@ script FighterAttack extends AttackComponent
             ---@type FighterComponent
             local fighter = fc
             baseDamage = math.floor(baseDamage * fighter:GetDamageMultiplier())
+            -- 무릉 누적 데미지 보너스 적용
+            if fighter.MuruDmgBonus > 0 then
+                baseDamage = math.floor(baseDamage * (1 + fighter.MuruDmgBonus))
+            end
         end
 
         return baseDamage
@@ -65,20 +69,29 @@ script FighterAttack extends AttackComponent
                     -- 실제 플레이어: OppUserId 일치 여부 확인
                     if defPc.UserId ~= oppId then return false end
                 else
-                    -- 더미 엔티티: DummyFighterComponent.DummyUserId 일치 여부 확인
+                    -- 더미 또는 무릉 보스: ID 일치 여부 확인
                     local dcc = defender:GetComponent("script.DummyFighterComponent")
-                    if dcc == nil then return false end
-                    ---@type DummyFighterComponent
-                    local dc = dcc
-                    if dc.DummyUserId ~= oppId then return false end
+                    local mbc = defender:GetComponent("script.MuruBossBot")
+                    if dcc ~= nil then
+                        ---@type DummyFighterComponent
+                        local dc = dcc
+                        if dc.DummyUserId ~= oppId then return false end
+                    elseif mbc ~= nil then
+                        ---@type MuruBossBot
+                        local mb = mbc
+                        if mb.BossId ~= oppId then return false end
+                    else
+                        return false
+                    end
                 end
             end
         end
 
-        -- 실제 플레이어 또는 더미만 공격 대상
+        -- 실제 플레이어, 더미, 또는 무릉 보스만 공격 대상
         local isPlayer = defender.PlayerComponent ~= nil
         local isDummy  = defender:GetComponent("script.DummyFighterComponent") ~= nil
-        if not isPlayer and not isDummy then return false end
+        local isBoss   = defender:GetComponent("script.MuruBossBot") ~= nil
+        if not isPlayer and not isDummy and not isBoss then return false end
 
         -- 사망한 파이터 제외
         local fc = defender:GetComponent("script.FighterComponent")

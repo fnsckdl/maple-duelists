@@ -1,14 +1,14 @@
 {
   "Id": "",
   "GameId": "",
-  "EntryKey": "codeblock://c9328c48-6355-4cb4-bb34-63ac8f8f6dfa",
+  "EntryKey": "codeblock://35d9b6e6-0edc-4918-9e3e-e32f68d7b79d",
   "ContentType": "x-mod/codeblock",
   "Content": "",
   "Usage": 0,
   "UsePublish": 1,
   "UseService": 0,
   "CoreVersion": "26.5.0.0",
-  "StudioVersion": "0.1.0.0",
+  "StudioVersion": "",
   "DynamicLoading": 0,
   "ContentProto": {
     "Use": "Json",
@@ -22,10 +22,10 @@
         "Minor": 1
       },
       "Description": "",
-      "Id": "c9328c48-6355-4cb4-bb34-63ac8f8f6dfa",
+      "Id": "35d9b6e6-0edc-4918-9e3e-e32f68d7b79d",
       "Language": 1,
-      "Name": "GameManagerLogic",
-      "Type": 5,
+      "Name": "TFShurikenProjectile",
+      "Type": 1,
       "Source": 0,
       "Target": null
     }

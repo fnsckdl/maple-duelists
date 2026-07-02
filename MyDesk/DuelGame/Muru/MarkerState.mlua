@@ -1,0 +1,3 @@
+@State
+script MarkerState extends StateType
+end

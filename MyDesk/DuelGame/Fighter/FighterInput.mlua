@@ -3,6 +3,13 @@ script FighterInput extends Component
     property any keyDownHandler = nil
     property any keyUpHandler   = nil
 
+    -- 섀도어 플래시 점프: 점프키 2회 연타 감지
+    property boolean jumpWindowOpen = false
+
+    -- 썬콜 텔레포트: 방향키 현재 입력 상태 (-1/0/1)
+    property integer tpDirH = 0   -- 수평: -1=왼쪽, 0=중립, 1=오른쪽
+    property integer tpDirV = 0   -- 수직: -1=아래, 0=중립, 1=위
+
     @ExecSpace("ClientOnly")
     method void OnBeginPlay()
         -- 로컬 플레이어만 입력 등록
@@ -34,56 +41,155 @@ script FighterInput extends Component
         end
     end
 
-    -- ─── 키 매핑 (직업 공통) ─────────────────────────────────
+    -- ─── 키 매핑 (직업 공통) ─────────────────────────────────────
     --  Alt         : 점프 (PlayerController 액션키)
+    --  UpArrow     : 포탈 입장 (로비 맵 포탈 위에서만 유효)
     --  Shift       : 가드 ON/OFF
-    --  Ctrl        : 슬롯 0  — 기본공격
-    --  X           : 슬롯 1  — 1차 스킬 A
-    --  C           : 슬롯 2  — 1차 스킬 B
-    --  Z           : 슬롯 3  — 2차 스킬 A
-    --  F           : 슬롯 4  — 2차 스킬 B
-    --  Q           : 슬롯 5  — 3차 스킬 A  (히어로: 브레이브 슬래시 / 신궁: 모탈 블로우)
-    --  E           : 슬롯 6  — 3차 스킬 B  (히어로: 샤우트 / 신궁: 볼트 스위프)
-    --  1           : 슬롯 7  — 4차 스킬 A
-    --  2           : 슬롯 8  — 4차 스킬 B
-    --  3           : 슬롯 9  — 5차 스킬 A
-    --  4           : 슬롯 10 — 5차 스킬 B  (히어로: 발할라 / 신궁: 파이널 에임 버프)
-    --  V           : 오리진 스킬 (게이지 100% 필요)
-    --  Tab         : 라운드 강제 스킵 (테스트 전용)
+    -- ── 키 매핑 요약 ──────────────────────────────────────────────────
+    --  [공통]     Alt   : 점프 (PlayerController 액션키)
+    --             ↑     : 포탈 입장
+    --             Tab   : 테스트 스킵
+    --             Ctrl  : 기본공격
+    --  [공통 — 히어로/신궁/섀도어] Shift: 가드 ON/OFF
+    --  [공통 — 히어로/신궁/섀도어] X/C/Z/F    : 슬롯 1/2/3/4
+    --  [공통 — 히어로/신궁/섀도어] Q/E/1/2/3/4: 슬롯 5/6/7/8/9/10
+    --  [히어로/신궁] V: 오리진 스킬
+    --  [섀도어]      V: 소닉 블로우 (슬롯11, 오리진 필살기, CD 30.0s)
+    --                Alt x2: 플래시 점프 (공중 입력, CD 5.0s)
+    --  ── 섀도어 슬롯 배치 ─────────────────────────────────────────
+    --   X=1(스틸)  C=2(다크사이트)  Z=3(새비지블로우)  F=4(헤이스트)
+    --   Q=5(어썰터)  E=6(메소익스플로전)
+    --   1=7(부메랑스텝)  2=8(연막탄)  3=9(절개)  4=10(멸귀참영진)
+    --   V=11(소닉블로우)
+    --  [썬콜]    Shift+방향: 텔레포트 (CD 2.0s)  ← Mage 전용 예외
+    --   X=1(아이스 스트라이크)  C=2(체인 라이트닝)  Z=3(썬더 볼트)  F=4(블리자드)
+    --   Q=5(글레이셜 체인, CD 6s)  E=6(엘퀴네스, CD 15s)  1=7(인피니티, CD 25s)
+    --   V=11(프로즌 라이트닝, CD 50s)
 
     method void OnKeyDown(KeyDownEvent event)
         if self.Entity ~= _UserService.LocalPlayer then return end
+        local k  = event.key
+        local jc = self:GetLocalJobClass()
 
-        local k = event.key
-        if     k == KeyboardKey.LeftControl  or k == KeyboardKey.RightControl then
+        -- 방향키: 썬콜 텔레포트용 방향 추적
+        if k == KeyboardKey.UpArrow then
+            self.tpDirV = 1
+            self:RequestPortalAction()
+            return
+        elseif k == KeyboardKey.DownArrow then
+            self.tpDirV = -1
+            return
+        elseif k == KeyboardKey.LeftArrow then
+            self.tpDirH = -1
+            return
+        elseif k == KeyboardKey.RightArrow then
+            self.tpDirH = 1
+            return
+        end
+
+        -- 점프키 (Alt): 섀도어는 2회 연타 감지
+        if k == KeyboardKey.LeftAlt or k == KeyboardKey.RightAlt then
+            if jc == 2 then
+                if self.jumpWindowOpen then
+                    self.jumpWindowOpen = false
+                    self:RequestFlashJump()
+                else
+                    self.jumpWindowOpen = true
+                    _TimerService:SetTimerOnce(function()
+                        self.jumpWindowOpen = false
+                    end, 1.5)
+                end
+            end
+            return  -- PlayerController가 Jump 액션 처리함
+        end
+
+        -- Ctrl: 기본공격 (모든 직업)
+        if k == KeyboardKey.LeftControl or k == KeyboardKey.RightControl then
             self:RequestBasicAttack()
-        elseif k == KeyboardKey.LeftShift    or k == KeyboardKey.RightShift   then
-            self:RequestSetGuard(true)
-        elseif k == KeyboardKey.V            then self:RequestOrigin()
-        elseif k == KeyboardKey.Tab          then self:RequestTabAction()
-        elseif k == KeyboardKey.X            then self:RequestSkillSlot(1)
-        elseif k == KeyboardKey.C            then self:RequestSkillSlot(2)
-        elseif k == KeyboardKey.Z            then self:RequestSkillSlot(3)
-        elseif k == KeyboardKey.F            then self:RequestSkillSlot(4)
-        elseif k == KeyboardKey.Q            then self:RequestSkillSlot(5)
-        elseif k == KeyboardKey.E            then self:RequestSkillSlot(6)
-        elseif k == KeyboardKey.Alpha1       then self:RequestSkillSlot(7)
-        elseif k == KeyboardKey.Alpha2       then self:RequestSkillSlot(8)
-        elseif k == KeyboardKey.Alpha3       then self:RequestSkillSlot(9)
-        elseif k == KeyboardKey.Alpha4       then self:RequestSkillSlot(10)
+            return
+        end
+
+        -- Tab: 테스트 스킵
+        if k == KeyboardKey.Tab then
+            self:RequestTabAction()
+            return
+        end
+
+        -- Shift: 가드 ON (히어로/신궁/섀도어 공통), 썬콜은 텔레포트
+        if k == KeyboardKey.LeftShift or k == KeyboardKey.RightShift then
+            if jc == 3 then
+                self:RequestTeleportSkill(self.tpDirH, self.tpDirV)
+            else
+                self:RequestSetGuard(true)
+            end
+            return
+        end
+
+        -- V: 섀도어/썬콜=슬롯11(오리진 필살기), 히어로/신궁=오리진 게이지
+        if k == KeyboardKey.V then
+            if jc == 2 or jc == 3 then
+                self:RequestSkillSlot(11)          -- 섀도어: 소닉 블로우 / 썬콜: 프로즌 라이트닝
+            else
+                self:RequestOrigin()               -- 히어로/신궁: 오리진
+            end
+            return
+        end
+
+        -- A/S/D: 확장 슬롯 14/15/16 (전 직업 공통)
+        if k == KeyboardKey.A then self:RequestSkillSlot(14) return end
+        if k == KeyboardKey.S then self:RequestSkillSlot(15) return end
+        if k == KeyboardKey.D then self:RequestSkillSlot(16) return end
+
+        -- X/C/Z/F/Q/E/1/2/3/4: 슬롯 1-10 (전 직업 공통)
+        if     k == KeyboardKey.X      then self:RequestSkillSlot(1)
+        elseif k == KeyboardKey.C      then self:RequestSkillSlot(2)
+        elseif k == KeyboardKey.Z      then self:RequestSkillSlot(3)
+        elseif k == KeyboardKey.F      then self:RequestSkillSlot(4)
+        elseif k == KeyboardKey.Q      then self:RequestSkillSlot(5)
+        elseif k == KeyboardKey.E      then self:RequestSkillSlot(6)
+        elseif k == KeyboardKey.Alpha1 then self:RequestSkillSlot(7)
+        elseif k == KeyboardKey.Alpha2 then self:RequestSkillSlot(8)
+        elseif k == KeyboardKey.Alpha3 then self:RequestSkillSlot(9)
+        elseif k == KeyboardKey.Alpha4 then self:RequestSkillSlot(10)
         end
     end
 
     method void OnKeyUp(KeyUpEvent event)
         if self.Entity ~= _UserService.LocalPlayer then return end
+        local k  = event.key
+        local jc = self:GetLocalJobClass()
 
-        local k = event.key
+        -- 방향키 해제: 텔레포트 방향 초기화
+        if k == KeyboardKey.UpArrow    then self.tpDirV = 0 return end
+        if k == KeyboardKey.DownArrow  then self.tpDirV = 0 return end
+        if k == KeyboardKey.LeftArrow  then self.tpDirH = 0 return end
+        if k == KeyboardKey.RightArrow then self.tpDirH = 0 return end
+
+        -- Shift 해제: 가드 해제 (히어로/신궁/섀도어 공통, 썬콜 제외)
         if k == KeyboardKey.LeftShift or k == KeyboardKey.RightShift then
-            self:RequestSetGuard(false)
+            if jc ~= 3 then
+                self:RequestSetGuard(false)
+            end
         end
     end
 
+    -- 현재 플레이어의 JobClass를 클라이언트에서 직접 읽음 (RPC 왕복 없이 즉각 판정)
+    @ExecSpace("ClientOnly")
+    method integer GetLocalJobClass()
+        local fc = self.Entity:GetComponent("script.FighterComponent")
+        if fc == nil then return 0 end
+        ---@type FighterComponent
+        local f = fc
+        return f.JobClass
+    end
+
     -- ─── 서버 RPC ────────────────────────────────────
+
+    -- ↑ 키: 포탈 영역에 있으면 GameManagerLogic 이 분기 처리
+    @ExecSpace("Server")
+    method void RequestPortalAction()
+        _GameManagerLogic:HandlePortalAction(senderUserId)
+    end
 
     @ExecSpace("Server")
     method void RequestBasicAttack()
@@ -113,9 +219,11 @@ script FighterInput extends Component
         if fc == nil then return end
         ---@type FighterComponent
         local fighter = fc
-        -- 슬롯 1-2=1차, 3-4=2차, 5-6=3차, 7-8=4차, 9-10=5차
-        local required = (slot + 1) // 2
-        if fighter.JobLevel < required then return end
+        -- 슬롯 1-10: 잠금 레벨 체크. 슬롯 11+: 직업 확장 슬롯 → 레벨 체크 없음
+        if slot <= 10 then
+            local required = (slot + 1) // 2
+            if fighter.JobLevel < required then return end
+        end
         local cd = fighter.SkillCDs[slot]
         if cd ~= nil and cd > 0 then return end
         local sm = self.Entity:GetComponent("script.SkillManager")
@@ -123,6 +231,28 @@ script FighterInput extends Component
         ---@type SkillManager
         local skillMgr = sm
         skillMgr:ExecuteSkillSlot(slot)
+    end
+
+    -- 섀도어 플래시 점프 (공중 Alt 2회 연타, CD 5.0s / 슬롯11)
+    @ExecSpace("Server")
+    method void RequestFlashJump()
+        if not self:CanAct() then return end
+        local sm = self.Entity:GetComponent("script.SkillManager")
+        if sm == nil then return end
+        ---@type SkillManager
+        local skillMgr = sm
+        skillMgr:ExecuteFlashJump()
+    end
+
+    -- 썬콜 텔레포트 (Shift+방향, CD 2.0s / 슬롯12)
+    @ExecSpace("Server")
+    method void RequestTeleportSkill(integer dirH, integer dirV)
+        if not self:CanAct() then return end
+        local sm = self.Entity:GetComponent("script.SkillManager")
+        if sm == nil then return end
+        ---@type SkillManager
+        local skillMgr = sm
+        skillMgr:ExecuteTeleportSkill(dirH, dirV)
     end
 
     @ExecSpace("Server")
@@ -147,16 +277,59 @@ script FighterInput extends Component
         _GameManagerLogic:HandleTabAction(senderUserId)
     end
 
+    -- 훈련장 내 직업 변경: JobClass만 바꾸고 맵 이동 없음
     @ExecSpace("Server")
-    method void RequestSetJobClass(integer jobClass)
-        -- 유효한 직업 번호(0=히어로, 1=신궁)만 허용
-        if jobClass < 0 or jobClass > 1 then return end
+    method void RequestChangeJobInPractice(integer jobClass)
+        if jobClass < 0 or jobClass > 3 then return end
         local fc = self.Entity:GetComponent("script.FighterComponent")
         if fc == nil then return end
         ---@type FighterComponent
         local fighter = fc
         fighter.JobClass = jobClass
-        log("[FighterInput] JobClass 설정: " .. tostring(jobClass))
+        _GameManagerLogic:HandleJobChangeInPractice(senderUserId)
+        log("[FighterInput] 훈련장 직업 변경: " .. tostring(jobClass) .. " / " .. senderUserId)
+    end
+
+    -- 캐릭터 선택 완료: JobClass 설정 후 map_lobby 로 이동
+    @ExecSpace("Server")
+    method void RequestSetJobClass(integer jobClass)
+        if jobClass < 0 or jobClass > 3 then return end
+        local fc = self.Entity:GetComponent("script.FighterComponent")
+        if fc == nil then return end
+        ---@type FighterComponent
+        local fighter = fc
+        fighter.JobClass = jobClass
+
+        -- 로비 맵 고정 스폰 위치 (맵 중앙 근처)
+        local lobbySpawn = Vector3(0.0, 1.0, 0.0)
+        _TeleportService:TeleportToMapPosition(self.Entity, lobbySpawn, "map_lobby")
+        _GameManagerLogic:SetPlayerSpawnPos(senderUserId, lobbySpawn)
+        log("[FighterInput] JobClass=" .. tostring(jobClass)
+            .. " → map_lobby 이동: " .. senderUserId)
+    end
+
+    -- (사용 안 함: 기동기는 RequestFlashJump / RequestTeleportSkill로 이전)
+    @ExecSpace("Server")
+    method void RequestMobilitySkill()
+        -- no-op: mobility skills now handled via RequestFlashJump / RequestTeleportSkill
+    end
+
+    -- 매칭 취소 요청
+    @ExecSpace("Server")
+    method void RequestCancelMatch()
+        _GameManagerLogic:CancelMatchmaking(senderUserId)
+    end
+
+    -- 무릉도장 보상 선택 (MuruHUDLogic 버튼 클릭 → 여기 → MuruGameLogic)
+    @ExecSpace("Server")
+    method void RequestMuruReward(integer choice)
+        _MuruGameLogic:ApplyReward(senderUserId, choice)
+    end
+
+    -- 무릉도장 나가기 버튼
+    @ExecSpace("Server")
+    method void RequestMuruExit()
+        _MuruGameLogic:ForceExit(senderUserId)
     end
 
     -- ─── 내부 유틸 ────────────────────────────────────

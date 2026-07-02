@@ -10,11 +10,15 @@ script DuelHUDLogic extends Logic
 
     -- myHPFill / myGaugeFill 은 UIMyInfo.mlua 가 담당 (노랑 감쇠 잔상 포함)
     property SpriteGUIRendererComponent oppHPFill    = "4f2a6335-52fc-4ca2-93ce-a477a10df13a"
-    property SpriteGUIRendererComponent oppGaugeFill = "ea4bbd96-bc19-4618-95fc-1b5254f0ed8b"
+    property SpriteGUIRendererComponent oppGaugeFill = "2a548e2a-78a3-4e9f-ba32-ffab4d630d99"
+    property TextComponent textMuruTimer = "af0049f8-aa33-4edf-8076-d268509695f3"
 
-    property ButtonComponent btnLeave = "eba1b858-6adf-415c-aa63-c869bc646a06"
-    property any leaveHandler = nil
+    property ButtonComponent btnLeave     = "eba1b858-6adf-415c-aa63-c869bc646a06"
+    property ButtonComponent btnChangeJob = "b8777f07-5039-49ba-9d49-d44406889124"
+    property any leaveHandler     = nil
+    property any changeJobHandler = nil
 
+    property boolean lastPracticeMode = false
     property integer lastRound     = -1
     property integer lastTimerCeil = -1
     property integer lastMyScore   = -1
@@ -31,6 +35,12 @@ script DuelHUDLogic extends Logic
                 self:OnLeaveClicked()
             end)
         end
+        if isvalid(self.btnChangeJob) then
+            self.btnChangeJob.Entity.Enable = false
+            self.changeJobHandler = self.btnChangeJob.Entity:ConnectEvent(ButtonClickEvent, function()
+                self:OnChangeJobClicked()
+            end)
+        end
         log("[DuelHUD] 초기화 완료")
     end
 
@@ -39,17 +49,55 @@ script DuelHUDLogic extends Logic
             self.btnLeave.Entity:DisconnectEvent(ButtonClickEvent, self.leaveHandler)
             self.leaveHandler = nil
         end
+        if self.changeJobHandler ~= nil and isvalid(self.btnChangeJob) then
+            self.btnChangeJob.Entity:DisconnectEvent(ButtonClickEvent, self.changeJobHandler)
+            self.changeJobHandler = nil
+        end
     end
 
     method void OnLeaveClicked()
+        local lp = _UserService.LocalPlayer
+        if isvalid(lp) then
+            local fcComp = lp:GetComponent("script.FighterComponent")
+            if fcComp ~= nil then
+                ---@type FighterComponent
+                local fc = fcComp
+                if fc.MatchMode == "muru" then
+                    local fi = lp:GetComponent("script.FighterInput")
+                    if fi ~= nil then
+                        ---@type FighterInput
+                        local input = fi
+                        input:RequestMuruExit()
+                    end
+                    log("[DuelHUD] 무릉 나가기 요청")
+                    return
+                end
+            end
+        end
         -- 서버에 방 퇴장 요청 (훈련: 즉시 종료 / 멀티 진행 중: 기권 / 결과 창: 정리)
         _GameManagerLogic:RequestLeaveRoom()
-        -- 클라이언트 즉시 캐릭터 선택 화면으로 복귀
-        _CharacterSelectHUD:ShowSelectScreen()
         -- 결과 패널이 열려 있으면 닫기
         if isvalid(self.panelResult) then self.panelResult.Enable = false end
         self.resultShown = false
         log("[DuelHUD] 방 나가기 요청")
+    end
+
+    method void OnChangeJobClicked()
+        -- 로비(none): 일반 선택 화면 (확인 시 map_lobby 리스폰)
+        -- 훈련장(practice): 맵 이동 없이 직업만 교체
+        local lp = _UserService.LocalPlayer
+        if not isvalid(lp) then return end
+        local fcComp = lp:GetComponent("script.FighterComponent")
+        if fcComp ~= nil then
+            ---@type FighterComponent
+            local fc = fcComp
+            if fc.MatchMode == "practice" then
+                _CharacterSelectHUD:ShowForPractice()
+            else
+                _CharacterSelectHUD:ShowSelectScreen()
+            end
+        end
+        log("[DuelHUD] 직업 변경 팝업 요청")
     end
 
     method void OnUpdate(number delta)
@@ -59,6 +107,39 @@ script DuelHUDLogic extends Logic
         if fcComp == nil then return end
         ---@type FighterComponent
         local fc = fcComp
+
+        -- 직업 변경 버튼: 로비(none) + 훈련장(practice)에서 표시, 멀티 진행 중은 숨김
+        local showBtn = (fc.MatchMode == "none" or fc.MatchMode == "practice")
+        if showBtn ~= self.lastPracticeMode then
+            self.lastPracticeMode = showBtn
+            if isvalid(self.btnChangeJob) then
+                self.btnChangeJob.Entity.Enable = showBtn
+            end
+        end
+
+        -- ── 무릉도장 모드 분기 ─────────────────────────────────
+        if fc.MatchMode == "muru" then
+            if not self._T.muruActive then
+                self._T.muruActive = true
+                if isvalid(self.textMuruTimer) then self.textMuruTimer.Entity.Visible = true end
+                if isvalid(self.textScore)     then self.textScore.Text = "" end
+            end
+            self:UpdateMuruHUD(fc)
+            return
+        end
+
+        -- 무릉 종료 후 정리
+        if self._T.muruActive then
+            self._T.muruActive = false
+            if isvalid(self.textMuruTimer) then self.textMuruTimer.Entity.Visible = false end
+            if isvalid(self.oppHPFill)    then self.oppHPFill.FillAmount    = 1.0 end
+            if isvalid(self.oppGaugeFill) then self.oppGaugeFill.FillAmount = 0.0 end
+            self.lastRound     = -1
+            self.lastTimerCeil = -1
+            self.lastMyScore   = -1
+            self.lastOppScore  = -1
+        end
+
         if fc.MatchMode == "none" then return end
 
         -- ─── 라운드 ──────────────────────────────────
@@ -124,6 +205,54 @@ script DuelHUDLogic extends Logic
         end
     end
 
+    -- ── 무릉 모드 HUD 갱신 ───────────────────────────────────
+    method void UpdateMuruHUD(FighterComponent fc)
+        -- TextRound: 층 정보
+        if fc.MuruFloor ~= self.lastRound then
+            self.lastRound = fc.MuruFloor
+            if isvalid(self.textRound) then
+                local floorStr = (fc.MuruFloor > 0) and (fc.MuruFloor .. "F") or ""
+                self.textRound.Text = "무릉도장  " .. floorStr
+            end
+        end
+        -- TextTimer(중앙): 경과 시간 카운트업 ("흐르게")
+        local timerSec = math.floor(fc.MuruTimer)
+        if timerSec ~= self.lastTimerCeil then
+            self.lastTimerCeil = timerSec
+            if isvalid(self.textTimer) then
+                local m = math.floor(timerSec / 60)
+                local s = timerSec % 60
+                self.textTimer.Text = string.format("%d:%02d", m, s)
+            end
+        end
+        -- TextMuruTimer(OppHP 아래): 정밀 타이머 매 프레임 갱신
+        if isvalid(self.textMuruTimer) then
+            local t  = fc.MuruTimer
+            local m  = math.floor(t / 60)
+            local s  = math.floor(t % 60)
+            local cs = math.floor((t % 1) * 100)
+            self.textMuruTimer.Text = string.format("%d:%02d.%02d", m, s, cs)
+        end
+        -- 보스 HP 바
+        if fc.OppUserId ~= "" then
+            local bossEnt = self:FindOpponent(fc.OppUserId)
+            if isvalid(bossEnt) then
+                local bfc = bossEnt:GetComponent("script.FighterComponent")
+                if bfc ~= nil then
+                    ---@type FighterComponent
+                    local boss = bfc
+                    if isvalid(self.oppHPFill) then
+                        local r = (boss.MaxHP > 0) and (boss.HP / boss.MaxHP) or 0
+                        self.oppHPFill.FillAmount = math.max(0, math.min(1, r))
+                    end
+                    if isvalid(self.oppGaugeFill) then
+                        self.oppGaugeFill.FillAmount = 0
+                    end
+                end
+            end
+        end
+    end
+
     method Entity FindOpponent(string oppId)
         if oppId == "" then return nil end
         if oppId:len() >= 6 and oppId:sub(1,6) == "DUMMY_" then
@@ -136,6 +265,20 @@ script DuelHUDLogic extends Logic
                 ---@type DummyFighterComponent
                 local dc = comp
                 if dc.DummyUserId == oppId then return dc.Entity end
+            end
+            return nil
+        end
+        -- 무릉 보스: MuruBossBot.BossId 로 맵에서 탐색
+        if oppId:len() >= 10 and oppId:sub(1,10) == "MURU_BOSS_" then
+            local lp = _UserService.LocalPlayer
+            if not isvalid(lp) then return nil end
+            local map = lp.CurrentMap
+            if not isvalid(map) then return nil end
+            local comps = map:GetChildComponentsByTypeName("script.MuruBossBot", true)
+            for _, comp in ipairs(comps) do
+                ---@type MuruBossBot
+                local bot = comp
+                if bot.BossId == oppId then return bot.Entity end
             end
             return nil
         end

@@ -1,0 +1,62 @@
+@Component
+script MatchPortalComponent extends Component
+    -- 멀티플레이 매칭 포탈 영역 감지 컴포넌트.
+    -- 이 컴포넌트가 붙은 엔티티에 TriggerComponent 가 있어야 한다.
+    -- 플레이어가 ↑ 키를 누르면 GameManagerLogic.HandlePortalAction 이 호출되고,
+    -- 상태가 "match" 이면 매칭 팝업을 열고 큐에 등록한다.
+
+    property any triggerEnterHandler = nil
+    property any triggerLeaveHandler = nil
+
+    @ExecSpace("ServerOnly")
+    method void OnBeginPlay()
+        self.triggerEnterHandler = self.Entity:ConnectEvent(TriggerEnterEvent, function(e)
+            self:OnTriggerEnter(e)
+        end)
+        self.triggerLeaveHandler = self.Entity:ConnectEvent(TriggerLeaveEvent, function(e)
+            self:OnTriggerLeave(e)
+        end)
+        log("[MatchPortal] 초기화 완료")
+    end
+
+    @ExecSpace("ServerOnly")
+    method void OnEndPlay()
+        if self.triggerEnterHandler ~= nil then
+            self.Entity:DisconnectEvent(TriggerEnterEvent, self.triggerEnterHandler)
+            self.triggerEnterHandler = nil
+        end
+        if self.triggerLeaveHandler ~= nil then
+            self.Entity:DisconnectEvent(TriggerLeaveEvent, self.triggerLeaveHandler)
+            self.triggerLeaveHandler = nil
+        end
+    end
+
+    @ExecSpace("ServerOnly")
+    method void OnTriggerEnter(TriggerEnterEvent event)
+        local bodyEnt = event.TriggerBodyEntity
+        if not isvalid(bodyEnt) then return end
+        if not isvalid(bodyEnt.PlayerComponent) then return end
+        local userId = bodyEnt.PlayerComponent.UserId
+        _GameManagerLogic:SetPlayerPortalState(userId, "match")
+        self:ShowPortalHint(true, userId)
+        log("[MatchPortal] 플레이어 진입: " .. userId)
+    end
+
+    @ExecSpace("ServerOnly")
+    method void OnTriggerLeave(TriggerLeaveEvent event)
+        local bodyEnt = event.TriggerBodyEntity
+        if not isvalid(bodyEnt) then return end
+        if not isvalid(bodyEnt.PlayerComponent) then return end
+        local userId = bodyEnt.PlayerComponent.UserId
+        _GameManagerLogic:SetPlayerPortalState(userId, "")
+        self:ShowPortalHint(false, userId)
+        log("[MatchPortal] 플레이어 이탈: " .. userId)
+    end
+
+    -- 서버 → 해당 클라이언트에만 힌트 표시 RPC.
+    -- 호출 형태: self:ShowPortalHint(show, targetUserId)
+    @ExecSpace("Client")
+    method void ShowPortalHint(boolean show)
+        _MatchingPopupHUD:OnPortalHint(show, "멀티플레이")
+    end
+end

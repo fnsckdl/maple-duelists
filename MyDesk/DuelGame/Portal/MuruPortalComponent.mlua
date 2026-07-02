@@ -1,0 +1,61 @@
+@Component
+script MuruPortalComponent extends Component
+    -- 무릉도장 포탈 트리거 컴포넌트.
+    -- 이 컴포넌트가 붙은 엔티티에 TriggerComponent 가 있어야 한다.
+    -- 플레이어가 트리거 영역에 진입/이탈하면 GameManagerLogic 에 "muru" 상태를 등록.
+    -- FighterInput 이 ↑ 키 입력 시 GameManagerLogic.HandlePortalAction 을 호출하면
+    -- MuruGameLogic:StartSession 으로 연결된다.
+
+    property any triggerEnterHandler = nil
+    property any triggerLeaveHandler = nil
+
+    @ExecSpace("ServerOnly")
+    method void OnBeginPlay()
+        self.triggerEnterHandler = self.Entity:ConnectEvent(TriggerEnterEvent, function(e)
+            self:OnTriggerEnter(e)
+        end)
+        self.triggerLeaveHandler = self.Entity:ConnectEvent(TriggerLeaveEvent, function(e)
+            self:OnTriggerLeave(e)
+        end)
+        log("[MuruPortal] 초기화 완료")
+    end
+
+    @ExecSpace("ServerOnly")
+    method void OnEndPlay()
+        if self.triggerEnterHandler ~= nil then
+            self.Entity:DisconnectEvent(TriggerEnterEvent, self.triggerEnterHandler)
+            self.triggerEnterHandler = nil
+        end
+        if self.triggerLeaveHandler ~= nil then
+            self.Entity:DisconnectEvent(TriggerLeaveEvent, self.triggerLeaveHandler)
+            self.triggerLeaveHandler = nil
+        end
+    end
+
+    @ExecSpace("ServerOnly")
+    method void OnTriggerEnter(TriggerEnterEvent event)
+        local bodyEnt = event.TriggerBodyEntity
+        if not isvalid(bodyEnt) then return end
+        if not isvalid(bodyEnt.PlayerComponent) then return end
+        local userId = bodyEnt.PlayerComponent.UserId
+        _GameManagerLogic:SetPlayerPortalState(userId, "muru")
+        self:ShowPortalHint(true, userId)
+        log("[MuruPortal] 플레이어 진입: " .. userId)
+    end
+
+    @ExecSpace("ServerOnly")
+    method void OnTriggerLeave(TriggerLeaveEvent event)
+        local bodyEnt = event.TriggerBodyEntity
+        if not isvalid(bodyEnt) then return end
+        if not isvalid(bodyEnt.PlayerComponent) then return end
+        local userId = bodyEnt.PlayerComponent.UserId
+        _GameManagerLogic:SetPlayerPortalState(userId, "")
+        self:ShowPortalHint(false, userId)
+        log("[MuruPortal] 플레이어 이탈: " .. userId)
+    end
+
+    @ExecSpace("Client")
+    method void ShowPortalHint(boolean show)
+        _MatchingPopupHUD:OnPortalHint(show, "무릉도장")
+    end
+end

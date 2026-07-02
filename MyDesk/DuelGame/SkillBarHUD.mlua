@@ -89,6 +89,32 @@ script SkillBarHUD extends Logic
     property string iconRUID_BM_9  = "26e39436667d499aac9e6c3a22368d05"  -- 스플릿 애로우 icon [3]
     property string iconRUID_BM_10 = "6351d0b0b23145508c383eac98067c88"  -- 파이널 에임 icon [4]
 
+    -- ── 섀도어 스킬 아이콘 RUID ───────────────────────────────────
+    property string iconRUID_TF_0  = ""                                  -- 단검 마스터리 [Ctrl] (기본공격)
+    property string iconRUID_TF_1  = "0cdc58f4336044e58e07afcd112727d0"  -- 스틸 [X]
+    property string iconRUID_TF_2  = "0946f69d84464df29b24b94c744c868d"  -- 다크사이트 [C]
+    property string iconRUID_TF_3  = "5146d54c65864a63b2d86e524e3a0c14"  -- 새비지 블로우 [Z]
+    property string iconRUID_TF_4  = "75596ddd8cf747a6bfc3e0e1b6a93d79"  -- 헤이스트 [F]
+    property string iconRUID_TF_5  = ""                                  -- 어썰터 [Q]
+    property string iconRUID_TF_6  = "0784bfbeea6545e3a1dbbbe2aebfa2b2"  -- 메소 익스플로전 [E]
+    property string iconRUID_TF_7  = ""                                  -- 부메랑 스텝 [1]
+    property string iconRUID_TF_8  = "b944ae2274a04a1b96df2875368a8105"  -- 연막탄 [2]
+    property string iconRUID_TF_9  = "3bb2063281f442c597a28bb32fede739"  -- 절개 [3]
+    property string iconRUID_TF_10 = "75e9e19b47544cf186a9c85cb0a856cc"  -- 멸귀참영진 [4]
+
+    -- ── 썬콜 스킬 아이콘 RUID (msw-search로 교체 가능) ──────────
+    property string iconRUID_IL_0  = "4e76419dd50a4ca99103118dd05e4628"  -- 매직 클로 [Ctrl]
+    property string iconRUID_IL_1  = "dbee0d9812a04400837ba38e89cbffbc"  -- 아이스 스트라이크 [X]
+    property string iconRUID_IL_2  = "f84bad609f3a47c29ed662abea683f2e"  -- 체인 라이트닝 [C]
+    property string iconRUID_IL_3  = "5360e76224b14134b8bd00ede1d34e63"  -- 썬더 볼트 [Z]
+    property string iconRUID_IL_4  = "846868d95f1c445ea5d0df5b84cb00a9"  -- 블리자드 [F]
+    property string iconRUID_IL_5  = ""                                  -- 글레이셜 체인 [Q]
+    property string iconRUID_IL_6  = "bf34dcd7cd284e3bba1d5094fc758923"  -- 엘퀴네스 [E]
+    property string iconRUID_IL_7  = "eaf484bba47e4fdb8f55d13d86faf46a"  -- 인피니티 [1]
+    property string iconRUID_IL_8  = ""
+    property string iconRUID_IL_9  = ""
+    property string iconRUID_IL_10 = "c31c1e37cf2a423d90d8883a81c293f9"  -- 오버로드 마나 [4]
+
     property any     timerId        = nil
     property integer lastJobLevel   = -1
     property integer localJobClass  = -1  -- 직업 변경 감지용
@@ -165,6 +191,22 @@ script SkillBarHUD extends Logic
                 self.iconRUID_BM_3,  self.iconRUID_BM_4,  self.iconRUID_BM_5,
                 self.iconRUID_BM_6,  self.iconRUID_BM_7,  self.iconRUID_BM_8,
                 self.iconRUID_BM_9,  self.iconRUID_BM_10
+            }
+        elseif jobClass == 2 then
+            -- 섀도어
+            ruids = {
+                self.iconRUID_TF_0,  self.iconRUID_TF_1,  self.iconRUID_TF_2,
+                self.iconRUID_TF_3,  self.iconRUID_TF_4,  self.iconRUID_TF_5,
+                self.iconRUID_TF_6,  self.iconRUID_TF_7,  self.iconRUID_TF_8,
+                self.iconRUID_TF_9,  self.iconRUID_TF_10
+            }
+        elseif jobClass == 3 then
+            -- 썬콜
+            ruids = {
+                self.iconRUID_IL_0,  self.iconRUID_IL_1,  self.iconRUID_IL_2,
+                self.iconRUID_IL_3,  self.iconRUID_IL_4,  self.iconRUID_IL_5,
+                self.iconRUID_IL_6,  self.iconRUID_IL_7,  self.iconRUID_IL_8,
+                self.iconRUID_IL_9,  self.iconRUID_IL_10
             }
         else
             -- 히어로 (기본)

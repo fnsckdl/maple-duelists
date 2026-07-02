@@ -1,0 +1,40 @@
+@Logic
+script FallProtectionLogic extends Logic
+    -- 모든 맵의 낙사 방지 로직.
+    -- 플레이어 Y 좌표가 fallThresholdY 아래로 떨어지면
+    -- GameManagerLogic 에 저장된 SpawnPos 로 즉시 텔레포트한다.
+    -- 맵 이동 없이 같은 맵 내 좌표로만 복귀 (destinationMapName = "").
+
+    property number fallThresholdY = -10.0
+    property number _checkInterval = 0.3
+    property number _accum         = 0.0
+
+    @ExecSpace("ServerOnly")
+    method void OnBeginPlay()
+        log("[FallProtect] 초기화 — 임계값 Y=" .. tostring(self.fallThresholdY))
+    end
+
+    @ExecSpace("ServerOnly")
+    method void OnUpdate(number delta)
+        self._accum += delta
+        if self._accum < self._checkInterval then return end
+        self._accum = 0.0
+
+        local users = _UserService.UserEntities
+        if users == nil then return end
+
+        for _, userEnt in ipairs(users.Values) do
+            if isvalid(userEnt) and isvalid(userEnt.PlayerComponent) then
+                local pos = userEnt.TransformComponent.WorldPosition
+                if pos.y < self.fallThresholdY then
+                    local userId = userEnt.PlayerComponent.UserId
+                    local spawnPos = _GameManagerLogic:GetPlayerSpawnPos(userId)
+                    -- destinationMapName="" → 현재 맵 유지, 좌표만 이동
+                    _TeleportService:TeleportToMapPosition(userEnt, spawnPos, "")
+                    log("[FallProtect] 낙사 감지 → 리스폰: " .. userId
+                        .. " Y=" .. string.format("%.1f", pos.y))
+                end
+            end
+        end
+    end
+end

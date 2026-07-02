@@ -1,0 +1,96 @@
+@Logic
+@ExecSpace("ClientOnly")
+script MatchingPopupHUD extends Logic
+    -- 매칭 대기 팝업 및 포탈 힌트를 관리하는 ClientOnly Logic.
+    -- 서버 RPC(GameManagerLogic.NotifyMatchingStarted/Cancelled)로 표시/숨김 제어.
+    -- 포탈 힌트(PracticePortalComponent / MatchPortalComponent)도 이 Logic이 처리.
+
+    -- UI 바인딩 (UIBuilder 가 UUID 를 자동 주입)
+    property Entity         popupRoot   = "1485685b-d908-4248-b2ce-5ac570b04fef"
+    property TextComponent  statusText  = "859cae4e-b82c-472f-a50d-209bc95666d7"
+    property TextComponent  timerText   = "cead31c4-d866-47ba-a145-1673f89d0ffb"
+    property TextComponent  hintText    = "18a89bfc-2179-44d1-aace-221b1e759e71"
+    property ButtonComponent btnCancel  = "dae8ceaa-2ae1-4c85-8e2d-309a356d419a"
+
+    property any     cancelHandler = nil
+    property boolean _isMatching   = false
+    property number  _elapsed      = 0.0
+
+    method void OnBeginPlay()
+        if isvalid(self.btnCancel) then
+            self.cancelHandler = self.btnCancel.Entity:ConnectEvent(ButtonClickEvent, function()
+                self:OnCancelClick()
+            end)
+        end
+        self:HidePopup()
+        log("[MatchingPopupHUD] 초기화 완료")
+    end
+
+    method void OnEndPlay()
+        if self.cancelHandler ~= nil and isvalid(self.btnCancel) then
+            self.btnCancel.Entity:DisconnectEvent(ButtonClickEvent, self.cancelHandler)
+            self.cancelHandler = nil
+        end
+    end
+
+    method void OnUpdate(number delta)
+        if not self._isMatching then return end
+        self._elapsed += delta
+        local mins = math.floor(self._elapsed / 60)
+        local secs = math.floor(self._elapsed % 60)
+        if isvalid(self.timerText) then
+            self.timerText.Text = string.format("%02d:%02d", mins, secs)
+        end
+    end
+
+    -- 매칭 팝업 열기 (GameManagerLogic.NotifyMatchingStarted 에서 호출)
+    method void ShowMatchingPopup()
+        self._isMatching = true
+        self._elapsed    = 0.0
+        if isvalid(self.statusText) then
+            self.statusText.Text = "상대를 찾고 있습니다..."
+        end
+        if isvalid(self.timerText) then
+            self.timerText.Text = "00:00"
+        end
+        if isvalid(self.hintText) then
+            self.hintText.Text = ""
+        end
+        if isvalid(self.popupRoot) then
+            self.popupRoot.Enable = true
+        end
+        log("[MatchingPopupHUD] 매칭 팝업 열림")
+    end
+
+    -- 팝업 닫기 (취소 / 매칭 성사 후 호출)
+    method void HidePopup()
+        self._isMatching = false
+        if isvalid(self.popupRoot) then
+            self.popupRoot.Enable = false
+        end
+    end
+
+    -- 포탈 영역 힌트 표시 (PracticePortalComponent / MatchPortalComponent 에서 호출)
+    method void OnPortalHint(boolean show, string portalName)
+        if not isvalid(self.hintText) then return end
+        if show then
+            self.hintText.Text = "[ ↑ ] " .. portalName .. " 입장"
+        else
+            self.hintText.Text = ""
+        end
+    end
+
+    -- 취소 버튼 클릭
+    method void OnCancelClick()
+        local player = _UserService.LocalPlayer
+        if not isvalid(player) then return end
+        local fi = player:GetComponent("script.FighterInput")
+        if fi ~= nil then
+            ---@type FighterInput
+            local fighterInput = fi
+            fighterInput:RequestCancelMatch()
+        end
+        self:HidePopup()
+        log("[MatchingPopupHUD] 매칭 취소")
+    end
+end

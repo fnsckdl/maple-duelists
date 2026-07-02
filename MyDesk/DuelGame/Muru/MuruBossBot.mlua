@@ -1,0 +1,225 @@
+@Component
+script MuruBossBot extends Component
+
+    -- ── 외부에서 MuruGameLogic.StartFloor 가 설정 ──────────
+    property string  OwnerUserId  = ""   -- 플레이어 userId
+    @Sync property string  BossId = ""   -- e.g. "MURU_BOSS_alice"
+    property integer BossJobClass = 0    -- 0=히어로 1=신궁 2=섀도어 3=썬콜
+    property number  DmgMult      = 1.0  -- 층 배율 적용 데미지 배수
+    property integer BaseDmg      = 80   -- 1층 기본 타격량
+    property number  AiDelay      = 1.5  -- 공격 간격 (초)
+
+    -- ── 사운드 RUIDs (모델 Values에서 주입) ──────────────────
+    property string sfxAttack = ""
+    property string sfxHit    = ""
+    property string sfxDie    = ""
+
+    -- ── 내부 타이머 ──────────────────────────────────────────
+    property number _aiTimer   = 0.0
+    property number _moveTimer = 0.0
+
+    @ExecSpace("ServerOnly")
+    method void OnBeginPlay()
+        local sc = self.Entity.StateComponent
+        if isvalid(sc) then
+            sc:AddState("MOVE",   MarkerState)
+            sc:AddState("ATTACK", MarkerState)
+        end
+        log("[MuruBossBot] 보스 초기화 — Job=" .. self.BossJobClass
+            .. " Delay=" .. self.AiDelay)
+    end
+
+    @ExecSpace("ServerOnly")
+    method void OnUpdate(number delta)
+        -- 행동 불가 상태면 스킵
+        local fc = self.Entity:GetComponent("script.FighterComponent")
+        if fc ~= nil then
+            ---@type FighterComponent
+            local f = fc
+            if not f:CanAct() then return end
+        end
+
+        self._moveTimer = self._moveTimer + delta
+        self._aiTimer   = self._aiTimer   + delta
+
+        -- 이동: 0.25초마다 갱신
+        if self._moveTimer >= 0.25 then
+            self._moveTimer = 0.0
+            self:DoMovement()
+        end
+
+        -- 공격: AiDelay마다 실행
+        if self._aiTimer >= self.AiDelay then
+            self._aiTimer = 0.0
+            self:ExecuteAttack()
+        end
+    end
+
+    -- ── 이동 ─────────────────────────────────────────────────
+    @ExecSpace("ServerOnly")
+    method void DoMovement()
+        local playerEnt = _UserService:GetUserEntityByUserId(self.OwnerUserId)
+        if not isvalid(playerEnt) then return end
+
+        local myPos = self.Entity.TransformComponent.WorldPosition
+        local pPos  = playerEnt.TransformComponent.WorldPosition
+        local dx    = pPos.x - myPos.x
+        local dy    = pPos.y - myPos.y
+
+        local rb = self.Entity.RigidbodyComponent
+        if not isvalid(rb) then return end
+
+        local isMoving = false
+
+        -- 수평 이동
+        if math.abs(dx) > 0.8 then
+            local dir = 1
+            if dx < 0 then dir = -1 end
+            rb:AddForce(Vector2(dir * 5.0, 0))
+            isMoving = true
+
+            -- 진행 방향으로 스프라이트 뒤집기 (기본 스프라이트 방향: 왼쪽)
+            local tc = self.Entity.TransformComponent
+            local s = tc.Scale
+            tc.Scale = Vector3(-dir * math.abs(s.x), s.y, s.z)
+        end
+
+        -- 점프: 플레이어가 위에 있을 때
+        if dy > 1.5 then
+            rb:AddForce(Vector2(0, 7.0))
+        end
+
+        -- 이동 애니메이션 (ATTACK/DEAD 중에는 끼어들지 않음)
+        local sc = self.Entity.StateComponent
+        if isvalid(sc) then
+            local cur = sc.CurrentStateName
+            if cur ~= "ATTACK" and cur ~= "DEAD" then
+                if isMoving then
+                    sc:ChangeState("MOVE")
+                else
+                    sc:ChangeState("IDLE")
+                end
+            end
+        end
+    end
+
+    -- ── 공격 ─────────────────────────────────────────────────
+    method void ExecuteAttack()
+        local playerEnt = _UserService:GetUserEntityByUserId(self.OwnerUserId)
+        if not isvalid(playerEnt) then return end
+
+        local targetFC = playerEnt:GetComponent("script.FighterComponent")
+        if targetFC == nil then return end
+        ---@type FighterComponent
+        local tf = targetFC
+
+        -- 사망·무적·은신 체크
+        if not tf:IsAlive() then return end
+        if tf.IsInvincible  then return end
+
+        local myPos = self.Entity.TransformComponent.WorldPosition
+        local pPos  = playerEnt.TransformComponent.WorldPosition
+        local dist  = math.abs(pPos.x - myPos.x)
+        local dir   = 1
+        if pPos.x < myPos.x then dir = -1 end
+
+        local hitRange = 2.0
+        local dmg      = math.floor(self.BaseDmg * self.DmgMult)
+
+        -- 섀도어: 분리 처리 (텔레포트 후 새 거리 판정 + 딜레이)
+        if self.BossJobClass == 2 then
+            if tf.DarkSightActive then return end
+            local sc2 = self.Entity.StateComponent
+            if isvalid(sc2) then sc2:ChangeState("ATTACK") end
+            if self.sfxAttack ~= "" then self:PlaySFXMulticast(self.sfxAttack) end
+            if dist > 1.5 then
+                local tpPos = Vector3(pPos.x - dir * 0.8, myPos.y, myPos.z)
+                _TeleportService:TeleportToMapPosition(self.Entity, tpPos, "")
+            end
+            -- 0.15초 후 새 위치에서 거리 재판정
+            local dmgFinal = dmg
+            _TimerService:SetTimerOnce(function()
+                local pEnt2 = _UserService:GetUserEntityByUserId(self.OwnerUserId)
+                if not isvalid(pEnt2) then return end
+                local tfc2 = pEnt2:GetComponent("script.FighterComponent")
+                if tfc2 == nil then return end
+                ---@type FighterComponent
+                local tf2 = tfc2
+                if not tf2:IsAlive() or tf2.IsInvincible then return end
+                local myP2 = self.Entity.TransformComponent.WorldPosition
+                local pP2  = pEnt2.TransformComponent.WorldPosition
+                if math.abs(pP2.x - myP2.x) <= 1.8 then
+                    tf2:TakeDamage(dmgFinal, false)
+                    log("[MuruBossBot] 섀도어 적중 dmg=" .. tostring(dmgFinal))
+                end
+            end, 0.15)
+            _TimerService:SetTimerOnce(function()
+                local sc3 = self.Entity.StateComponent
+                if isvalid(sc3) and sc3.CurrentStateName ~= "DEAD" then
+                    sc3:ChangeState("IDLE")
+                end
+            end, 0.5)
+            return
+        end
+
+        if self.BossJobClass == 0 then
+            -- 히어로: 근접 강타 (range 2.0)
+            hitRange = 2.0
+        elseif self.BossJobClass == 1 then
+            -- 신궁: 원거리 화살 (range 5.0) — 다크사이트 관통 안 함
+            if tf.DarkSightActive then return end
+            hitRange = 5.0
+            dmg = math.floor(dmg * 0.85)
+        elseif self.BossJobClass == 3 then
+            -- 썬콜: AoE 마법 (range 3.5)
+            hitRange = 3.5
+            dmg = math.floor(dmg * 0.9)
+        end
+
+        -- 공격 애니메이션
+        local sc = self.Entity.StateComponent
+        if isvalid(sc) then
+            sc:ChangeState("ATTACK")
+        end
+
+        if dist <= hitRange then
+            tf:TakeDamage(dmg, false)
+            log("[MuruBossBot] 공격 적중 — Job=" .. tostring(self.BossJobClass) .. " dmg=" .. tostring(dmg) .. " dist=" .. tostring(dist))
+        end
+
+        -- 공격 사운드 재생 (클라이언트)
+        if self.sfxAttack ~= "" then
+            self:PlaySFXMulticast(self.sfxAttack)
+        end
+
+        -- 0.5초 후 IDLE 복귀 (DEAD 상태는 유지)
+        _TimerService:SetTimerOnce(function()
+            local sc2 = self.Entity.StateComponent
+            if isvalid(sc2) and sc2.CurrentStateName ~= "DEAD" then
+                sc2:ChangeState("IDLE")
+            end
+        end, 0.5)
+    end
+
+    -- ── 사운드 멀티캐스트 ─────────────────────────────────────
+    @ExecSpace("Multicast")
+    method void PlaySFXMulticast(string ruid)
+        if ruid == "" then return end
+        _SoundService:PlaySound(ruid, 1.0)
+    end
+
+    -- ── 피격/사망 사운드 (FighterHit/FighterComponent 에서 호출 가능) ─
+    @ExecSpace("Multicast")
+    method void PlayHitSFX()
+        if self.sfxHit ~= "" then
+            _SoundService:PlaySound(self.sfxHit, 1.0)
+        end
+    end
+
+    @ExecSpace("Multicast")
+    method void PlayDieSFX()
+        if self.sfxDie ~= "" then
+            _SoundService:PlaySound(self.sfxDie, 1.0)
+        end
+    end
+end

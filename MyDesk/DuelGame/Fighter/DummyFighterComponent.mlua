@@ -1,7 +1,7 @@
 @Component
 script DummyFighterComponent extends Component
     -- GameManagerLogic이 StartPracticeRoom에서 "DUMMY_{roomId}"로 덮어씀
-    property string DummyUserId = "DUMMY_P2"
+    @Sync property string DummyUserId = "DUMMY_P2"
 
     @ExecSpace("ServerOnly")
     method void OnBeginPlay()

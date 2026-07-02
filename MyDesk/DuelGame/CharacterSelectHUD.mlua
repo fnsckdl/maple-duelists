@@ -3,20 +3,26 @@
 script CharacterSelectHUD extends Logic
 
     -- UI 바인딩 (UIBuilder 가 UUID를 자동 주입)
-    property Entity                    popupRoot    = "0cdf9f09-aeea-4d2a-92fe-a21e8864e25b"
-    property Entity                    btnHeroEnt   = "24392470-1928-4919-b1ea-4096264bbe0b"
-    property Entity                    btnBmEnt     = "0a355890-b435-4652-9f5c-629f22e46378"
-    property ButtonComponent           btnConfirm   = "2b482313-384d-4214-bc79-f74212fb3d6c"
-    property SpriteGUIRendererComponent heroSprite  = "24392470-1928-4919-b1ea-4096264bbe0b"
-    property SpriteGUIRendererComponent bmSprite    = "0a355890-b435-4652-9f5c-629f22e46378"
+    property Entity                     popupRoot      = "0cdf9f09-aeea-4d2a-92fe-a21e8864e25b"
+    property Entity                     btnHeroEnt     = "24392470-1928-4919-b1ea-4096264bbe0b"
+    property Entity                     btnBmEnt       = "0a355890-b435-4652-9f5c-629f22e46378"
+    property Entity                     btnSunCalEnt   = "46981742-b86b-44b9-acc7-a37fd2cec340"
+    property Entity                     btnShadowerEnt = "a5f559ce-2e8a-484a-9c24-6b1931d7ddf7"
+    property ButtonComponent            btnConfirm     = "2b482313-384d-4214-bc79-f74212fb3d6c"
+    property SpriteGUIRendererComponent heroSprite     = "24392470-1928-4919-b1ea-4096264bbe0b"
+    property SpriteGUIRendererComponent bmSprite       = "0a355890-b435-4652-9f5c-629f22e46378"
+    property SpriteGUIRendererComponent sunCalSprite   = "46981742-b86b-44b9-acc7-a37fd2cec340"
+    property SpriteGUIRendererComponent shadowerSprite = "a5f559ce-2e8a-484a-9c24-6b1931d7ddf7"
 
-    property any     heroHandler    = nil
-    property any     bmHandler      = nil
-    property any     confirmHandler = nil
-    property integer selectedJob    = 0     -- 0=히어로, 1=신궁
+    property any     heroHandler     = nil
+    property any     bmHandler       = nil
+    property any     sunCalHandler   = nil
+    property any     shadowerHandler = nil
+    property any     confirmHandler  = nil
+    property integer selectedJob     = 0     -- 0=히어로, 1=신궁, 2=섀도어, 3=썬콜
+    property boolean isPracticeMode  = false -- 훈련장에서 직업 변경 시 true (맵 이동 없음)
 
     method void OnBeginPlay()
-        -- 버튼 이벤트 연결
         if isvalid(self.btnHeroEnt) then
             self.heroHandler = self.btnHeroEnt:ConnectEvent(ButtonClickEvent, function()
                 self:SelectJob(0)
@@ -27,16 +33,25 @@ script CharacterSelectHUD extends Logic
                 self:SelectJob(1)
             end)
         end
+        if isvalid(self.btnSunCalEnt) then
+            self.sunCalHandler = self.btnSunCalEnt:ConnectEvent(ButtonClickEvent, function()
+                self:SelectJob(3)   -- jobClass 3 = 썬콜
+            end)
+        end
+        if isvalid(self.btnShadowerEnt) then
+            self.shadowerHandler = self.btnShadowerEnt:ConnectEvent(ButtonClickEvent, function()
+                self:SelectJob(2)   -- jobClass 2 = 섀도어
+            end)
+        end
         if isvalid(self.btnConfirm) then
             self.confirmHandler = self.btnConfirm.Entity:ConnectEvent(ButtonClickEvent, function()
                 self:ConfirmSelection()
             end)
         end
 
-        -- 기본 선택 = 히어로
         self:SelectJob(0)
         self:ShowSelectScreen()
-        log("[CharacterSelectHUD] 초기화 완료")
+        log("[CharacterSelectHUD] 초기화 완료 (4직업)")
     end
 
     method void OnEndPlay()
@@ -48,49 +63,77 @@ script CharacterSelectHUD extends Logic
             self.btnBmEnt:DisconnectEvent(ButtonClickEvent, self.bmHandler)
             self.bmHandler = nil
         end
+        if self.sunCalHandler and isvalid(self.btnSunCalEnt) then
+            self.btnSunCalEnt:DisconnectEvent(ButtonClickEvent, self.sunCalHandler)
+            self.sunCalHandler = nil
+        end
+        if self.shadowerHandler and isvalid(self.btnShadowerEnt) then
+            self.btnShadowerEnt:DisconnectEvent(ButtonClickEvent, self.shadowerHandler)
+            self.shadowerHandler = nil
+        end
         if self.confirmHandler and isvalid(self.btnConfirm) then
             self.btnConfirm.Entity:DisconnectEvent(ButtonClickEvent, self.confirmHandler)
             self.confirmHandler = nil
         end
     end
 
-    -- 선택창 표시
     method void ShowSelectScreen()
+        self.isPracticeMode = false
         if isvalid(self.popupRoot) then
             self.popupRoot.Enable = true
         end
     end
 
-    -- 선택창 숨기기
+    method void ShowForPractice()
+        -- 훈련장 내 직업 변경: 팝업만 열고 맵 이동은 하지 않음
+        self.isPracticeMode = true
+        if isvalid(self.popupRoot) then
+            self.popupRoot.Enable = true
+        end
+        log("[CharacterSelectHUD] 훈련장 직업 변경 모드")
+    end
+
     method void HideSelectScreen()
+        self.isPracticeMode = false
         if isvalid(self.popupRoot) then
             self.popupRoot.Enable = false
         end
     end
 
-    -- 직업 선택 (버튼 색상 업데이트 포함)
     method void SelectJob(integer jobClass)
         self.selectedJob = jobClass
         self:UpdateButtonHighlight()
-        local name = (jobClass == 0) and "히어로" or "신궁"
+        _SkillBarHUD:ApplyIconRUIDs(jobClass)
+        local names = {"히어로", "신궁", "섀도어", "썬콜"}
+        local idx = jobClass + 1
+        local name = (idx >= 1 and idx <= 4) and names[idx] or tostring(jobClass)
         log("[CharacterSelectHUD] 선택: " .. name)
     end
 
-    -- 선택된 버튼 강조 표시
     method void UpdateButtonHighlight()
-        if not isvalid(self.heroSprite) or not isvalid(self.bmSprite) then return end
+        local dark = Color(0.10, 0.10, 0.16, 1.0)
+
+        local heroCol     = dark
+        local bmCol       = dark
+        local sunCalCol   = dark
+        local shadowerCol = dark
+
         if self.selectedJob == 0 then
-            -- 히어로 선택: 파란 계열
-            self.heroSprite.Color = Color(0.20, 0.55, 1.00, 1.0)
-            self.bmSprite.Color   = Color(0.10, 0.10, 0.16, 1.0)
-        else
-            -- 신궁 선택: 주황 계열
-            self.heroSprite.Color = Color(0.10, 0.10, 0.16, 1.0)
-            self.bmSprite.Color   = Color(0.80, 0.40, 0.10, 1.0)
+            heroCol     = Color(0.20, 0.55, 1.00, 1.0)   -- 히어로: 파란
+        elseif self.selectedJob == 1 then
+            bmCol       = Color(0.80, 0.40, 0.10, 1.0)   -- 신궁: 주황
+        elseif self.selectedJob == 2 then
+            shadowerCol = Color(0.55, 0.10, 0.85, 1.0)   -- 섀도어: 보라
+        elseif self.selectedJob == 3 then
+            sunCalCol   = Color(1.00, 0.85, 0.10, 1.0)   -- 썬콜: 노란
         end
+
+        if isvalid(self.heroSprite)     then self.heroSprite.Color     = heroCol     end
+        if isvalid(self.bmSprite)       then self.bmSprite.Color       = bmCol       end
+        if isvalid(self.sunCalSprite)   then self.sunCalSprite.Color   = sunCalCol   end
+        if isvalid(self.shadowerSprite) then self.shadowerSprite.Color = shadowerCol end
     end
 
-    -- 확인 버튼: 서버에 JobClass 설정 요청 후 팝업 닫기
     method void ConfirmSelection()
         local player = _UserService.LocalPlayer
         if not isvalid(player) then return end
@@ -101,8 +144,14 @@ script CharacterSelectHUD extends Logic
         end
         ---@type FighterInput
         local fighterInput = fi
-        fighterInput:RequestSetJobClass(self.selectedJob)
-        self:HideSelectScreen()
-        log("[CharacterSelectHUD] 확인 → RequestSetJobClass(" .. tostring(self.selectedJob) .. ")")
+        if self.isPracticeMode then
+            fighterInput:RequestChangeJobInPractice(self.selectedJob)
+            self:HideSelectScreen()
+            log("[CharacterSelectHUD] 훈련장 직업 변경 → RequestChangeJobInPractice(" .. tostring(self.selectedJob) .. ")")
+        else
+            fighterInput:RequestSetJobClass(self.selectedJob)
+            self:HideSelectScreen()
+            log("[CharacterSelectHUD] 확인 → RequestSetJobClass(" .. tostring(self.selectedJob) .. ")")
+        end
     end
 end
