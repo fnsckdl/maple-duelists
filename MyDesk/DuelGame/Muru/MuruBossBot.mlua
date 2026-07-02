@@ -154,6 +154,9 @@ script MuruBossBot extends Component
                 end
             end, 0.15)
             _TimerService:SetTimerOnce(function()
+                -- 위 0.15초 데미지 타이머가 킬을 내 무릉 세션이 끝나면
+                -- 그 사이 보스(self.Entity)가 파괴될 수 있다.
+                if not isvalid(self.Entity) then return end
                 local sc3 = self.Entity.StateComponent
                 if isvalid(sc3) and sc3.CurrentStateName ~= "DEAD" then
                     sc3:ChangeState("IDLE")

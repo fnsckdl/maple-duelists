@@ -11,6 +11,7 @@ script FighterAttack extends AttackComponent
         elseif attackInfo == "rush2" then      baseDamage = 200
         elseif attackInfo == "power_strike1" then baseDamage = 300
         elseif attackInfo == "power_strike2" then baseDamage = 350
+        elseif attackInfo == "brave_slash" then   baseDamage = 130
         elseif attackInfo == "shout" then      baseDamage = 200
         elseif attackInfo == "raging_blow" then   baseDamage = 80
         elseif attackInfo == "raging_blow_plus" then baseDamage = 150
@@ -25,6 +26,33 @@ script FighterAttack extends AttackComponent
             else
                 baseDamage = 400
             end
+        -- ── 신궁(BM) ──────────────────────────────────────────
+        elseif attackInfo == "arrow_blow" then    baseDamage = 110
+        elseif attackInfo == "piercing_shot" then baseDamage = 130
+        elseif attackInfo == "iron_arrow" then    baseDamage = 220
+        elseif attackInfo == "mortal_blow" then   baseDamage = 260
+        elseif attackInfo == "bolt_sweep" then    baseDamage = 90
+        elseif attackInfo == "sniping" then       baseDamage = 420
+        -- ── 섀도어(TF) ────────────────────────────────────────
+        elseif attackInfo == "savage_blow" then   baseDamage = 45
+        elseif attackInfo == "assaulter" then     baseDamage = 240
+        elseif attackInfo == "boomerang" then     baseDamage = 130
+        elseif attackInfo == "boomerang_return" then baseDamage = 130
+        elseif attackInfo == "stele" then         baseDamage = 110
+        elseif attackInfo == "meso_explosion" then baseDamage = 230
+        elseif attackInfo == "jeolle" then        baseDamage = 120
+        elseif attackInfo == "jeolle_finish" then baseDamage = 280
+        elseif attackInfo == "shadow_world" then  baseDamage = 100
+        elseif attackInfo == "sonic_blow" then    baseDamage = 55
+        -- ── 썬콜(IL) ──────────────────────────────────────────
+        elseif attackInfo == "thunder_bolt" then  baseDamage = 90
+        elseif attackInfo == "ice_strike" then    baseDamage = 90
+        elseif attackInfo == "chain_lightning" then baseDamage = 55
+        elseif attackInfo == "glacial_chain" then baseDamage = 200
+        elseif attackInfo == "elquines_arrow" then baseDamage = 60
+        elseif attackInfo == "blizzard" then      baseDamage = 480
+        elseif attackInfo == "cold_beam" then     baseDamage = 220
+        elseif attackInfo == "frozen_lightning" then baseDamage = 550
         end
 
         -- 공격자 버프 배율 적용
@@ -47,8 +75,8 @@ script FighterAttack extends AttackComponent
         if fc ~= nil then
             ---@type FighterComponent
             local fighter = fc
-            -- 발할라: 모든 공격이 크리티컬
-            if fighter.IsValhalla then return true end
+            -- 발할라 또는 파이널 에임 버프: 모든 공격이 크리티컬
+            if fighter:IsAlwaysCritical() then return true end
         end
         return false
     end
