@@ -47,8 +47,6 @@ script FighterComponent extends Component
     property number BaseInputSpeed = 1.5
 
     -- ── 섀도어 전용 버프 상태 ────────────────────────
-    @Sync property boolean CoinFlipBuff   = false
-    property number CoinFlipTimer   = 0
     @Sync property boolean IsInvincible   = false   -- 연막탄 1초 무적
     property number InvincibleTimer = 0
     @Sync property boolean DarkSightActive = false  -- 다크사이트: 투사체 면역
@@ -163,14 +161,6 @@ script FighterComponent extends Component
             end
         end
 
-        if self.CoinFlipBuff then
-            self.CoinFlipTimer = self.CoinFlipTimer - delta
-            if self.CoinFlipTimer <= 0 then
-                self.CoinFlipBuff  = false
-                self.CoinFlipTimer = 0
-            end
-        end
-
         if self.InfinityBuff then
             self.InfinityTimer = self.InfinityTimer - delta
             if self.InfinityTimer <= 0 then
@@ -249,8 +239,6 @@ script FighterComponent extends Component
         self.ComboResetTimer = 0
         self.FinalAimBuff    = false
         self.FinalAimTimer   = 0
-        self.CoinFlipBuff    = false
-        self.CoinFlipTimer   = 0
         self.InfinityBuff    = false
         self.InfinityTimer   = 0
         self.ElquinesActive  = false
@@ -352,13 +340,6 @@ script FighterComponent extends Component
     end
 
     @ExecSpace("ServerOnly")
-    method void ActivateCoinFlip()
-        -- 섀도어: 다음 스킬 1회 20% 대미지 증폭 (5초 유효)
-        self.CoinFlipBuff  = true
-        self.CoinFlipTimer = 5.0
-    end
-
-    @ExecSpace("ServerOnly")
     method void ActivateInvincible(number duration)
         self.IsInvincible   = true
         self.InvincibleTimer = duration
@@ -429,17 +410,6 @@ script FighterComponent extends Component
         local finalCD = self.InfinityBuff and (cd * 0.5) or cd
         self.SkillCDs[slot]    = finalCD
         self.SkillMaxCDs[slot] = finalCD
-    end
-
-    method number GetDamageMult()
-        -- CoinFlip 소비 후 배율 반환. 서버에서 피해 계산 시 1회 사용.
-        local mult = self:GetDamageMultiplier()
-        if self.CoinFlipBuff then
-            mult = mult * 1.2
-            self.CoinFlipBuff  = false
-            self.CoinFlipTimer = 0
-        end
-        return mult
     end
 
     @ExecSpace("ServerOnly")
@@ -539,5 +509,19 @@ script FighterComponent extends Component
         end
 
         _GameManagerLogic:OnFighterDeath(userId)
+    end
+
+    @ExecSpace("ServerOnly")
+    method void Revive()
+        -- 네이티브 부활(ProcessRevive)만으로는 커스텀 StateComponent가 DEAD에
+        -- 머물러 비석이 남으므로, 여기서 IDLE로 함께 되돌린다.
+        local pc = self.Entity.PlayerComponent
+        if isvalid(pc) then
+            pc:ProcessRevive(pc.UserId)
+        end
+        if isvalid(self.Entity.StateComponent) then
+            self.Entity.StateComponent:ChangeState("IDLE")
+        end
+        log("[FighterComponent] Revive() 완료. State=" .. tostring(isvalid(self.Entity.StateComponent) and self.Entity.StateComponent.CurrentStateName or "N/A"))
     end
 end

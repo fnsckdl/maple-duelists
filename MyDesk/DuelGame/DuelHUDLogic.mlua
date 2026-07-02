@@ -253,8 +253,19 @@ script DuelHUDLogic extends Logic
         end
     end
 
+    -- oppId가 바뀌지 않는 한 맵 전체 스캔 결과를 재사용한다 (매 프레임 GetChildComponentsByTypeName 방지).
     method Entity FindOpponent(string oppId)
         if oppId == "" then return nil end
+        if self._T.oppCacheId == oppId and isvalid(self._T.oppCacheEnt) then
+            return self._T.oppCacheEnt
+        end
+        local found = self:ResolveOpponent(oppId)
+        self._T.oppCacheId  = oppId
+        self._T.oppCacheEnt = found
+        return found
+    end
+
+    method Entity ResolveOpponent(string oppId)
         if oppId:len() >= 6 and oppId:sub(1,6) == "DUMMY_" then
             local lp = _UserService.LocalPlayer
             if not isvalid(lp) then return nil end

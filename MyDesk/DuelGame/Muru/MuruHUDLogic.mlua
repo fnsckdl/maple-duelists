@@ -3,8 +3,6 @@ script MuruHUDLogic extends Logic
 
     -- ── UI 위젯 바인딩 (UIBuilder 자동 주입) ──────────────────
     property Entity              hudPanel    = "29d24cdc-1bb0-4671-a20f-b58e8b709f91"
-    property TextComponent       floorLabel  = "31254700-005c-4e44-866e-438ca178d6a7"
-    property TextComponent       timerLabel  = "cbdbd8eb-ecfc-4fa8-915a-22836062ebb9"
     property Entity              rewardPanel = "3a67276c-3d19-4c96-b246-a47e44494da0"
     property ButtonComponent     btn1        = "40cfa404-e0f3-40f1-9c87-042af5069458"
     property ButtonComponent     btn2        = "2f73476a-eeb3-4daa-b51d-9270a25d39db"
@@ -16,8 +14,6 @@ script MuruHUDLogic extends Logic
     -- ── 생명주기 ──────────────────────────────────────────────
     @ExecSpace("ClientOnly")
     method void OnBeginPlay()
-        self._T.hudVisible    = false
-        self._T.lastFloor     = -1
         self._T.lastState     = "none"
         self._T.rewardVisible = false
         self._T.endVisible    = false
@@ -26,38 +22,27 @@ script MuruHUDLogic extends Logic
         if isvalid(self.rewardPanel) then self.rewardPanel.Visible = false end
         if isvalid(self.endPanel)    then self.endPanel.Visible    = false end
 
-        if isvalid(self.btn1) then
-            self._T.h1 = self.btn1.Entity:ConnectEvent(ButtonClickEvent, function() self:OnRewardChoice(1) end)
-        end
-        if isvalid(self.btn2) then
-            self._T.h2 = self.btn2.Entity:ConnectEvent(ButtonClickEvent, function() self:OnRewardChoice(2) end)
-        end
-        if isvalid(self.btn3) then
-            self._T.h3 = self.btn3.Entity:ConnectEvent(ButtonClickEvent, function() self:OnRewardChoice(3) end)
-        end
-        if isvalid(self.btn4) then
-            self._T.h4 = self.btn4.Entity:ConnectEvent(ButtonClickEvent, function() self:OnRewardChoice(4) end)
+        self._T.rewardHandlers = {}
+        local rewardButtons = { self.btn1, self.btn2, self.btn3, self.btn4 }
+        for i, btn in ipairs(rewardButtons) do
+            if isvalid(btn) then
+                local choice = i
+                local evt = btn.Entity:ConnectEvent(ButtonClickEvent, function() self:OnRewardChoice(choice) end)
+                table.insert(self._T.rewardHandlers, { btn = btn, evt = evt })
+            end
         end
         log("[MuruHUDLogic] 초기화 완료")
     end
 
     @ExecSpace("ClientOnly")
     method void OnEndPlay()
-        if self._T.h1 ~= nil and isvalid(self.btn1) then
-            self.btn1.Entity:DisconnectEvent(ButtonClickEvent, self._T.h1)
-            self._T.h1 = nil
-        end
-        if self._T.h2 ~= nil and isvalid(self.btn2) then
-            self.btn2.Entity:DisconnectEvent(ButtonClickEvent, self._T.h2)
-            self._T.h2 = nil
-        end
-        if self._T.h3 ~= nil and isvalid(self.btn3) then
-            self.btn3.Entity:DisconnectEvent(ButtonClickEvent, self._T.h3)
-            self._T.h3 = nil
-        end
-        if self._T.h4 ~= nil and isvalid(self.btn4) then
-            self.btn4.Entity:DisconnectEvent(ButtonClickEvent, self._T.h4)
-            self._T.h4 = nil
+        if self._T.rewardHandlers ~= nil then
+            for _, entry in ipairs(self._T.rewardHandlers) do
+                if isvalid(entry.btn) then
+                    entry.btn.Entity:DisconnectEvent(ButtonClickEvent, entry.evt)
+                end
+            end
+            self._T.rewardHandlers = nil
         end
     end
 

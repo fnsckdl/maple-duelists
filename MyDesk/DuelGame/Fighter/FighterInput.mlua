@@ -135,11 +135,6 @@ script FighterInput extends Component
             return
         end
 
-        -- A/S/D: 확장 슬롯 14/15/16 (전 직업 공통)
-        if k == KeyboardKey.A then self:RequestSkillSlot(14) return end
-        if k == KeyboardKey.S then self:RequestSkillSlot(15) return end
-        if k == KeyboardKey.D then self:RequestSkillSlot(16) return end
-
         -- X/C/Z/F/Q/E/1/2/3/4: 슬롯 1-10 (전 직업 공통)
         if     k == KeyboardKey.X      then self:RequestSkillSlot(1)
         elseif k == KeyboardKey.C      then self:RequestSkillSlot(2)
@@ -306,12 +301,6 @@ script FighterInput extends Component
         _GameManagerLogic:SetPlayerSpawnPos(senderUserId, lobbySpawn)
         log("[FighterInput] JobClass=" .. tostring(jobClass)
             .. " → map_lobby 이동: " .. senderUserId)
-    end
-
-    -- (사용 안 함: 기동기는 RequestFlashJump / RequestTeleportSkill로 이전)
-    @ExecSpace("Server")
-    method void RequestMobilitySkill()
-        -- no-op: mobility skills now handled via RequestFlashJump / RequestTeleportSkill
     end
 
     -- 매칭 취소 요청

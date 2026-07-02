@@ -258,8 +258,7 @@ script SkillManager extends Component
             log("[SkillMgr] 플래시 점프 쿨타임 중: " .. string.format("%.1f", f.SkillCDs[11]) .. "s")
             return
         end
-        f.SkillCDs[11]    = 5.0
-        f.SkillMaxCDs[11] = 5.0
+        self:SetSkillCD(11, 5.0)
         self:UseFlashJump()
     end
 
@@ -1575,22 +1574,6 @@ script SkillManager extends Component
     end
 
     @ExecSpace("Multicast")
-    method void VFX_TF_SavageBlow(integer dir)
-        -- 6연타 파편 이펙트 (다중 위치)
-        local pos  = self.Entity.TransformComponent.WorldPosition
-        local cs   = self.Entity.TransformComponent.Scale
-        local sc   = math.abs(cs.x)
-        local opts = { SortingLayer = "Character", OrderInLayer = 10, FlipX = (dir < 0), Color = Color(0.15, 0.15, 0.15, 1) }
-        for i = 1, 6 do
-            local bp = Vector3(pos.x + dir * (0.3 + i * 0.08) * sc, pos.y + 0.3, pos.z)
-            if self.vfxRUID_TF_SavageBlow ~= "" then
-                _EffectService:PlayEffect(self.vfxRUID_TF_SavageBlow, self.Entity, bp, 0, Vector3(0.5*sc, 0.5*sc, 1), false, opts)
-            end
-        end
-        if self.sfxRUID_TF_SavageBlow ~= "" then _SoundService:PlaySound(self.sfxRUID_TF_SavageBlow, 0.5) end
-    end
-
-    @ExecSpace("Multicast")
     method void VFX_TF_Assaulter(integer dir)
         -- 돌진 먼지 이펙트
         self:PlayVFX(self.vfxRUID_TF_Assaulter, self.sfxRUID_TF_Assaulter, dir, 0.5, 0.3, 1.3, 0.8, 10, Color(0.1, 0.1, 0.1, 1))
@@ -1599,19 +1582,6 @@ script SkillManager extends Component
     @ExecSpace("Multicast")
     method void VFX_TF_MesoExplosion(integer dir)
         self:PlayVFX(self.vfxRUID_TF_MesoExplosion, self.sfxRUID_TF_MesoExplosion, dir, 0.5, 0.5, 2.0, 2.0, 8, Color(1, 1, 1, 1))
-    end
-
-    @ExecSpace("Multicast")
-    method void VFX_TF_Assassinate(integer dir)
-        -- 궁극기: 어둠 폭발 (다중 이펙트)
-        local pos  = self.Entity.TransformComponent.WorldPosition
-        local cs   = self.Entity.TransformComponent.Scale
-        local sc   = math.abs(cs.x)
-        local opts = { SortingLayer = "Character", OrderInLayer = 20, FlipX = (dir < 0), Color = Color(0.05, 0.05, 0.05, 1) }
-        if self.vfxRUID_TF_Assassinate ~= "" then
-            _EffectService:PlayEffect(self.vfxRUID_TF_Assassinate, self.Entity, pos, 0, Vector3(2*sc, 2*sc, 1), false, opts)
-        end
-        if self.sfxRUID_TF_Assassinate ~= "" then _SoundService:PlaySound(self.sfxRUID_TF_Assassinate, 0.5) end
     end
 
     @ExecSpace("Multicast")
@@ -1678,12 +1648,6 @@ script SkillManager extends Component
     end
 
     @ExecSpace("Multicast")
-    method void VFX_IL_TeleportMastery(integer dir)
-        -- 착지 번개 이펙트
-        self:PlayVFX(self.vfxRUID_IL_TeleportMastery, self.sfxRUID_IL_Lightning, dir, 0.0, 0.5, 1.5, 1.5, 10, Color(0.5, 0.8, 1, 1))
-    end
-
-    @ExecSpace("Multicast")
     method void VFX_IL_Blizzard(integer dir)
         -- 블리자드 광역 이펙트 (다중 파티클)
         local pos  = self.Entity.TransformComponent.WorldPosition
@@ -1694,44 +1658,6 @@ script SkillManager extends Component
             _EffectService:PlayEffect(self.vfxRUID_IL_Blizzard, self.Entity, pos, 0, Vector3(3*sc, 3*sc, 1), false, opts)
         end
         if self.sfxRUID_IL_Ice ~= "" then _SoundService:PlaySound(self.sfxRUID_IL_Ice, 0.5) end
-    end
-
-    @ExecSpace("Multicast")
-    method void VFX_IL_IceAge(integer dir)
-        -- 아이스 에이지 광역 이펙트
-        local pos  = self.Entity.TransformComponent.WorldPosition
-        local cs   = self.Entity.TransformComponent.Scale
-        local sc   = math.abs(cs.x)
-        local opts = { SortingLayer = "Character", OrderInLayer = 8, Color = Color(0.3, 0.7, 1, 1) }
-        if self.vfxRUID_IL_IceAge ~= "" then
-            _EffectService:PlayEffect(self.vfxRUID_IL_IceAge, self.Entity, pos, 0, Vector3(4*sc, 4*sc, 1), false, opts)
-        end
-        if self.sfxRUID_IL_Ice ~= "" then _SoundService:PlaySound(self.sfxRUID_IL_Ice, 0.5) end
-    end
-
-    @ExecSpace("Multicast")
-    method void VFX_IL_ArcThunder(integer dir)
-        -- 아크 선더 (강력한 낙뢰 연출)
-        local pos  = self.Entity.TransformComponent.WorldPosition
-        local cs   = self.Entity.TransformComponent.Scale
-        local sc   = math.abs(cs.x)
-        local opts = { SortingLayer = "Character", OrderInLayer = 20, FlipX = (dir < 0), Color = Color(0.6, 0.9, 1, 1) }
-        if self.vfxRUID_IL_ArcThunder ~= "" then
-            _EffectService:PlayEffect(self.vfxRUID_IL_ArcThunder, self.Entity, pos, 0, Vector3(3*sc, 3*sc, 1), false, opts)
-        end
-        if self.sfxRUID_IL_ArcThunder ~= "" then _SoundService:PlaySound(self.sfxRUID_IL_ArcThunder, 0.5) end
-    end
-
-    @ExecSpace("Multicast")
-    method void VFX_IL_TeleportCast(integer dir, Vector3 fromPos)
-        -- 텔레포트 출발 이펙트 (fromPos = 이동 전 위치)
-        local cs   = self.Entity.TransformComponent.Scale
-        local sc   = math.abs(cs.x)
-        local opts = { SortingLayer = "Character", OrderInLayer = 12, Color = Color(0.4, 0.8, 1, 0.9) }
-        if self.vfxRUID_IL_Teleport ~= "" then
-            _EffectService:PlayEffect(self.vfxRUID_IL_Teleport, self.Entity, fromPos, 0, Vector3(1.2*sc, 1.2*sc, 1), false, opts)
-        end
-        if self.sfxRUID_IL_Teleport ~= "" then _SoundService:PlaySound(self.sfxRUID_IL_Teleport, 0.5) end
     end
 
     @ExecSpace("Multicast")

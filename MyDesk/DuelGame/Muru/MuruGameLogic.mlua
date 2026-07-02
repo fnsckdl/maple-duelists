@@ -19,17 +19,8 @@ script MuruGameLogic extends Logic
     @ExecSpace("ServerOnly")
     method void OnBeginPlay()
         self._T.Sessions = {}
-        log("[MuruGameLogic] 초기화 완료")
-    end
-
-    -- 층 번호로 보스 직업 반환 (0→1→2→3 반복)
-    method integer GetBossJob(integer floor)
-        return (floor - 1) % 4
-    end
-
-    -- 층 번호로 보스 모델 ID 반환
-    method string GetBossModelId(integer floor)
-        local bossList = {
+        -- 층별 보스 모델 ID 목록 (호출마다 재생성하지 않도록 1회만 구성)
+        self._T.BossList = {
             "muru_boss_01", -- 1층:  mob/8644510
             "muru_boss_02", -- 2층:  검은 켄타우로스
             "muru_boss_03", -- 3층:  대나무 무사
@@ -51,8 +42,18 @@ script MuruGameLogic extends Logic
             "muru_boss_20", -- 19층: 호문스큘러
             "muru_boss_10", -- 20층: 무공 (최종 보스)
         }
-        local idx = math.min(floor, #bossList)
-        return bossList[idx]
+        log("[MuruGameLogic] 초기화 완료")
+    end
+
+    -- 층 번호로 보스 직업 반환 (0→1→2→3 반복)
+    method integer GetBossJob(integer floor)
+        return (floor - 1) % 4
+    end
+
+    -- 층 번호로 보스 모델 ID 반환
+    method string GetBossModelId(integer floor)
+        local idx = math.min(floor, #self._T.BossList)
+        return self._T.BossList[idx]
     end
 
     -- ── 타이머 틱 ─────────────────────────────────────────────
@@ -62,13 +63,18 @@ script MuruGameLogic extends Logic
         for userId, sess in pairs(self._T.Sessions) do
             if sess.timerRunning then
                 sess.muruTimer = sess.muruTimer + delta
-                local playerEnt = _UserService:GetUserEntityByUserId(userId)
-                if isvalid(playerEnt) then
-                    local fc = playerEnt:GetComponent("script.FighterComponent")
-                    if fc ~= nil then
-                        ---@type FighterComponent
-                        local f = fc
-                        f.MuruTimer = sess.muruTimer
+                -- @Sync 갱신은 0.1초마다만 (매 프레임 조회+동기화하면 낭비)
+                sess.syncTimer = (sess.syncTimer or 0) + delta
+                if sess.syncTimer >= 0.1 then
+                    sess.syncTimer = 0
+                    local playerEnt = _UserService:GetUserEntityByUserId(userId)
+                    if isvalid(playerEnt) then
+                        local fc = playerEnt:GetComponent("script.FighterComponent")
+                        if fc ~= nil then
+                            ---@type FighterComponent
+                            local f = fc
+                            f.MuruTimer = sess.muruTimer
+                        end
                     end
                 end
             end
@@ -172,19 +178,19 @@ script MuruGameLogic extends Logic
         end
 
         local fc = playerEnt:GetComponent("script.FighterComponent")
+        ---@type FighterComponent
+        local f = fc
         if fc ~= nil then
-            ---@type FighterComponent
-            local f = fc
             f.MatchMode      = "muru"
             f.MuruFloor      = floor
             f.MuruState      = "fighting"
             f.MuruDmgBonus   = sess.dmgBonus
             f.MuruSpeedBonus = sess.speedBonus
             f.OppUserId      = bossId
-            -- 1층: HP·게이지 완전 초기화 / 2층~: HP 유지, 게이지 30 보장
+            -- 1층: HP·게이지 완전 초기화(0부터 전투로 충전) / 2층~: HP 유지, 게이지 30 보장
             if floor == 1 then
                 f.HP          = f.MaxHP
-                f.OriginGauge = 100
+                f.OriginGauge = 0
             else
                 -- 이전 층에서 게이지를 다 썼어도 30은 보장 (전투로 채워 사용 가능)
                 if f.OriginGauge < 30 then
@@ -207,8 +213,8 @@ script MuruGameLogic extends Logic
             sess.muruTimer = 0.0
         end
 
-        log(string.format("[MuruGameLogic] %s %d층 | HP=%d DmgMult=%.2f Job=%d Delay=%.2f",
-            userId, floor, bossHP, dmgMult, bossJob, aiDelay))
+        log(string.format("[MuruGameLogic] %s %d층 | HP=%d DmgMult=%.2f Job=%d Delay=%.2f OriginGauge=%s",
+            userId, floor, bossHP, dmgMult, bossJob, aiDelay, tostring(fc ~= nil and f.OriginGauge or "N/A")))
     end
 
     -- ── 보스 사망 (FighterComponent.NotifyDeath 에서 호출) ────
@@ -369,11 +375,8 @@ script MuruGameLogic extends Logic
             f.HP             = f.MaxHP
             local mv = playerEnt.MovementComponent
             if isvalid(mv) then mv.InputSpeed = f.BaseInputSpeed end
-        end
-
-        -- 비석(DEAD) 상태 해제: ProcessRevive로 플레이어 애니메이션 복구
-        if isvalid(playerEnt.PlayerComponent) then
-            playerEnt.PlayerComponent:ProcessRevive(userId)
+            -- 비석(DEAD) 상태 해제: Revive()가 ProcessRevive + StateComponent를 함께 복구
+            f:Revive()
         end
 
         local lobbyPos = Vector3(0, 1, 0)
