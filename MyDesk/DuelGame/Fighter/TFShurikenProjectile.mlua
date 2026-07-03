@@ -6,9 +6,9 @@ script TFShurikenProjectile extends Component
     property string  hitRUID = ""   -- 피격 이펙트 RUID (SkillManager에서 주입)
     property integer initDir = 0    -- 0=미초기화 / 1=오른쪽 / -1=왼쪽
 
-    -- SkillManager.SpawnShuriken에서 스폰 직후 호출
     @ExecSpace("ServerOnly")
     method void Init(integer dir, Entity shooter)
+        -- SkillManager.SpawnShuriken에서 스폰 직후 호출
         self._T.shooter = shooter
         self._T.dist    = 0.0
         self._T.done    = false
@@ -92,9 +92,9 @@ script TFShurikenProjectile extends Component
         end
     end
 
-    -- 피격 처리: 발사자의 AttackComponent로 AttackFrom 호출
     @ExecSpace("ServerOnly")
     method void DoHit(Vector3 pos)
+        -- 피격 처리: 발사자의 AttackComponent로 AttackFrom 호출
         self._T.done = true
         local shooter = self._T.shooter
         if isvalid(shooter) then
@@ -111,9 +111,9 @@ script TFShurikenProjectile extends Component
         self.Entity:Destroy()
     end
 
-    -- 피격 VFX (클라이언트 — 엔티티 소멸 후에도 재생됨)
     @ExecSpace("Client")
     method void ShowHitEffect(number px, number py, number pz)
+        -- 피격 VFX (클라이언트 — 엔티티 소멸 후에도 재생됨)
         if self.hitRUID == "" then return end
         local m = self.Entity.CurrentMap
         if not isvalid(m) then return end

@@ -214,9 +214,9 @@ script FighterComponent extends Component
         end
     end
 
-    -- 라운드 시작: 전투 상태만 초기화 (룸 메타 필드는 GameManagerLogic이 관리)
     @ExecSpace("ServerOnly")
     method void ResetForRound(integer round)
+        -- 라운드 시작: 전투 상태만 초기화 (룸 메타 필드는 GameManagerLogic이 관리)
         self.JobLevel        = round
         self.HP              = self.MaxHP
         self.OriginGauge     = 0
@@ -404,9 +404,9 @@ script FighterComponent extends Component
         end
     end
 
-    -- SetSkillCD with Infinity buff 고려
     @ExecSpace("ServerOnly")
     method void SetSkillCDWithBuff(integer slot, number cd)
+        -- SetSkillCD with Infinity buff 고려
         local finalCD = self.InfinityBuff and (cd * 0.5) or cd
         self.SkillCDs[slot]    = finalCD
         self.SkillMaxCDs[slot] = finalCD

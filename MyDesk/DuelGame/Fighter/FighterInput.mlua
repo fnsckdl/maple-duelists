@@ -64,6 +64,7 @@ script FighterInput extends Component
     --  [썬콜]    Shift+방향: 텔레포트 (CD 2.0s)  ← Mage 전용 예외
     --   X=1(아이스 스트라이크)  C=2(체인 라이트닝)  Z=3(썬더 볼트)  F=4(블리자드)
     --   Q=5(글레이셜 체인, CD 6s)  E=6(엘퀴네스, CD 15s)  1=7(인피니티, CD 25s)
+    --   2=8(콜드 빔, CD 5s)  3=9(매직 가드, CD 15s)  4=10(오버로드 마나, CD 20s)
     --   V=11(프로즌 라이트닝, CD 50s)
 
     method void OnKeyDown(KeyDownEvent event)
@@ -168,9 +169,9 @@ script FighterInput extends Component
         end
     end
 
-    -- 현재 플레이어의 JobClass를 클라이언트에서 직접 읽음 (RPC 왕복 없이 즉각 판정)
     @ExecSpace("ClientOnly")
     method integer GetLocalJobClass()
+        -- 현재 플레이어의 JobClass를 클라이언트에서 직접 읽음 (RPC 왕복 없이 즉각 판정)
         local fc = self.Entity:GetComponent("script.FighterComponent")
         if fc == nil then return 0 end
         ---@type FighterComponent
@@ -180,9 +181,9 @@ script FighterInput extends Component
 
     -- ─── 서버 RPC ────────────────────────────────────
 
-    -- ↑ 키: 포탈 영역에 있으면 GameManagerLogic 이 분기 처리
     @ExecSpace("Server")
     method void RequestPortalAction()
+        -- ↑ 키: 포탈 영역에 있으면 GameManagerLogic 이 분기 처리
         _GameManagerLogic:HandlePortalAction(senderUserId)
     end
 
@@ -228,9 +229,9 @@ script FighterInput extends Component
         skillMgr:ExecuteSkillSlot(slot)
     end
 
-    -- 섀도어 플래시 점프 (공중 Alt 2회 연타, CD 5.0s / 슬롯11)
     @ExecSpace("Server")
     method void RequestFlashJump()
+        -- 섀도어 플래시 점프 (공중 Alt 2회 연타, CD 5.0s / 슬롯11)
         if not self:CanAct() then return end
         local sm = self.Entity:GetComponent("script.SkillManager")
         if sm == nil then return end
@@ -239,9 +240,9 @@ script FighterInput extends Component
         skillMgr:ExecuteFlashJump()
     end
 
-    -- 썬콜 텔레포트 (Shift+방향, CD 2.0s / 슬롯12)
     @ExecSpace("Server")
     method void RequestTeleportSkill(integer dirH, integer dirV)
+        -- 썬콜 텔레포트 (Shift+방향, CD 2.0s / 슬롯12)
         if not self:CanAct() then return end
         local sm = self.Entity:GetComponent("script.SkillManager")
         if sm == nil then return end
@@ -266,15 +267,15 @@ script FighterInput extends Component
         skillMgr:ExecuteOrigin()
     end
 
-    -- Tab 키: 훈련장 → 더미 HP 리셋 / 멀티 → 라운드 강제 스킵
     @ExecSpace("Server")
     method void RequestTabAction()
+        -- Tab 키: 훈련장 → 더미 HP 리셋 / 멀티 → 라운드 강제 스킵
         _GameManagerLogic:HandleTabAction(senderUserId)
     end
 
-    -- 훈련장 내 직업 변경: JobClass만 바꾸고 맵 이동 없음
     @ExecSpace("Server")
     method void RequestChangeJobInPractice(integer jobClass)
+        -- 훈련장 내 직업 변경: JobClass만 바꾸고 맵 이동 없음
         if jobClass < 0 or jobClass > 3 then return end
         local fc = self.Entity:GetComponent("script.FighterComponent")
         if fc == nil then return end
@@ -285,9 +286,9 @@ script FighterInput extends Component
         log("[FighterInput] 훈련장 직업 변경: " .. tostring(jobClass) .. " / " .. senderUserId)
     end
 
-    -- 캐릭터 선택 완료: JobClass 설정 후 map_lobby 로 이동
     @ExecSpace("Server")
     method void RequestSetJobClass(integer jobClass)
+        -- 캐릭터 선택 완료: JobClass 설정 후 map_lobby 로 이동
         if jobClass < 0 or jobClass > 3 then return end
         local fc = self.Entity:GetComponent("script.FighterComponent")
         if fc == nil then return end
@@ -303,21 +304,21 @@ script FighterInput extends Component
             .. " → map_lobby 이동: " .. senderUserId)
     end
 
-    -- 매칭 취소 요청
     @ExecSpace("Server")
     method void RequestCancelMatch()
+        -- 매칭 취소 요청
         _GameManagerLogic:CancelMatchmaking(senderUserId)
     end
 
-    -- 무릉도장 보상 선택 (MuruHUDLogic 버튼 클릭 → 여기 → MuruGameLogic)
     @ExecSpace("Server")
     method void RequestMuruReward(integer choice)
+        -- 무릉도장 보상 선택 (MuruHUDLogic 버튼 클릭 → 여기 → MuruGameLogic)
         _MuruGameLogic:ApplyReward(senderUserId, choice)
     end
 
-    -- 무릉도장 나가기 버튼
     @ExecSpace("Server")
     method void RequestMuruExit()
+        -- 무릉도장 나가기 버튼
         _MuruGameLogic:ForceExit(senderUserId)
     end
 

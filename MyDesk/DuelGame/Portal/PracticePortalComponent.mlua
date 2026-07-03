@@ -54,10 +54,10 @@ script PracticePortalComponent extends Component
         log("[PracticePortal] 플레이어 이탈: " .. userId)
     end
 
-    -- 서버 → 해당 클라이언트에만 힌트 표시 RPC.
-    -- 호출 형태: self:ShowPortalHint(show, targetUserId)  ← 마지막 인자가 targetUserId
     @ExecSpace("Client")
     method void ShowPortalHint(boolean show)
+        -- 서버 → 해당 클라이언트에만 힌트 표시 RPC.
+        -- 호출 형태: self:ShowPortalHint(show, targetUserId)  ← 마지막 인자가 targetUserId
         _MatchingPopupHUD:OnPortalHint(show, "훈련장")
     end
 end

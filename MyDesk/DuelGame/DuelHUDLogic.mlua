@@ -205,8 +205,8 @@ script DuelHUDLogic extends Logic
         end
     end
 
-    -- ── 무릉 모드 HUD 갱신 ───────────────────────────────────
     method void UpdateMuruHUD(FighterComponent fc)
+        -- ── 무릉 모드 HUD 갱신 ───────────────────────────────────
         -- TextRound: 층 정보
         if fc.MuruFloor ~= self.lastRound then
             self.lastRound = fc.MuruFloor
@@ -253,8 +253,8 @@ script DuelHUDLogic extends Logic
         end
     end
 
-    -- oppId가 바뀌지 않는 한 맵 전체 스캔 결과를 재사용한다 (매 프레임 GetChildComponentsByTypeName 방지).
     method Entity FindOpponent(string oppId)
+        -- oppId가 바뀌지 않는 한 맵 전체 스캔 결과를 재사용한다 (매 프레임 GetChildComponentsByTypeName 방지).
         if oppId == "" then return nil end
         if self._T.oppCacheId == oppId and isvalid(self._T.oppCacheEnt) then
             return self._T.oppCacheEnt

@@ -55,9 +55,9 @@ script MuruBossBot extends Component
         end
     end
 
-    -- ── 이동 ─────────────────────────────────────────────────
     @ExecSpace("ServerOnly")
     method void DoMovement()
+        -- ── 이동 ─────────────────────────────────────────────────
         local playerEnt = _UserService:GetUserEntityByUserId(self.OwnerUserId)
         if not isvalid(playerEnt) then return end
 
@@ -103,8 +103,8 @@ script MuruBossBot extends Component
         end
     end
 
-    -- ── 공격 ─────────────────────────────────────────────────
     method void ExecuteAttack()
+        -- ── 공격 ─────────────────────────────────────────────────
         local playerEnt = _UserService:GetUserEntityByUserId(self.OwnerUserId)
         if not isvalid(playerEnt) then return end
 
@@ -207,16 +207,16 @@ script MuruBossBot extends Component
         end, 0.5)
     end
 
-    -- ── 사운드 멀티캐스트 ─────────────────────────────────────
     @ExecSpace("Multicast")
     method void PlaySFXMulticast(string ruid)
+        -- ── 사운드 멀티캐스트 ─────────────────────────────────────
         if ruid == "" then return end
         _SoundService:PlaySound(ruid, 1.0)
     end
 
-    -- ── 피격/사망 사운드 (FighterHit/FighterComponent 에서 호출 가능) ─
     @ExecSpace("Multicast")
     method void PlayHitSFX()
+        -- ── 피격/사망 사운드 (FighterHit/FighterComponent 에서 호출 가능) ─
         if self.sfxHit ~= "" then
             _SoundService:PlaySound(self.sfxHit, 1.0)
         end

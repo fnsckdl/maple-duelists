@@ -43,8 +43,8 @@ script MatchingPopupHUD extends Logic
         end
     end
 
-    -- 매칭 팝업 열기 (GameManagerLogic.NotifyMatchingStarted 에서 호출)
     method void ShowMatchingPopup()
+        -- 매칭 팝업 열기 (GameManagerLogic.NotifyMatchingStarted 에서 호출)
         self._isMatching = true
         self._elapsed    = 0.0
         if isvalid(self.statusText) then
@@ -62,16 +62,16 @@ script MatchingPopupHUD extends Logic
         log("[MatchingPopupHUD] 매칭 팝업 열림")
     end
 
-    -- 팝업 닫기 (취소 / 매칭 성사 후 호출)
     method void HidePopup()
+        -- 팝업 닫기 (취소 / 매칭 성사 후 호출)
         self._isMatching = false
         if isvalid(self.popupRoot) then
             self.popupRoot.Enable = false
         end
     end
 
-    -- 포탈 영역 힌트 표시 (PracticePortalComponent / MatchPortalComponent 에서 호출)
     method void OnPortalHint(boolean show, string portalName)
+        -- 포탈 영역 힌트 표시 (PracticePortalComponent / MatchPortalComponent 에서 호출)
         if not isvalid(self.hintText) then return end
         if show then
             self.hintText.Text = "[ ↑ ] " .. portalName .. " 입장"
@@ -80,8 +80,8 @@ script MatchingPopupHUD extends Logic
         end
     end
 
-    -- 취소 버튼 클릭
     method void OnCancelClick()
+        -- 취소 버튼 클릭
         local player = _UserService.LocalPlayer
         if not isvalid(player) then return end
         local fi = player:GetComponent("script.FighterInput")

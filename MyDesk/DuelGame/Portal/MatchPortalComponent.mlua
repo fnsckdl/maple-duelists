@@ -53,10 +53,10 @@ script MatchPortalComponent extends Component
         log("[MatchPortal] 플레이어 이탈: " .. userId)
     end
 
-    -- 서버 → 해당 클라이언트에만 힌트 표시 RPC.
-    -- 호출 형태: self:ShowPortalHint(show, targetUserId)
     @ExecSpace("Client")
     method void ShowPortalHint(boolean show)
+        -- 서버 → 해당 클라이언트에만 힌트 표시 RPC.
+        -- 호출 형태: self:ShowPortalHint(show, targetUserId)
         _MatchingPopupHUD:OnPortalHint(show, "멀티플레이")
     end
 end

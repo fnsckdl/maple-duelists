@@ -11,9 +11,9 @@ script MuruHUDLogic extends Logic
     property Entity              endPanel    = "a239c8e2-41c0-4083-bc42-a20f9e6493d2"
     property TextComponent       endLabel    = "bc9ac862-6311-4631-aacf-a16ba26d5cf6"
 
-    -- ── 생명주기 ──────────────────────────────────────────────
     @ExecSpace("ClientOnly")
     method void OnBeginPlay()
+        -- ── 생명주기 ──────────────────────────────────────────────
         self._T.lastState     = "none"
         self._T.rewardVisible = false
         self._T.endVisible    = false
@@ -46,9 +46,9 @@ script MuruHUDLogic extends Logic
         end
     end
 
-    -- ── 매 프레임: FighterComponent 상태 감지 → UI 갱신 ────
     @ExecSpace("ClientOnly")
     method void OnUpdate(number delta)
+        -- ── 매 프레임: FighterComponent 상태 감지 → UI 갱신 ────
         local player = _UserService.LocalPlayer
         if not isvalid(player) then return end
 
@@ -73,9 +73,9 @@ script MuruHUDLogic extends Logic
         end
     end
 
-    -- ── 내부 유틸 ────────────────────────────────────────────
     @ExecSpace("ClientOnly")
     method string FormatTime(number seconds)
+        -- ── 내부 유틸 ────────────────────────────────────────────
         local m  = math.floor(seconds / 60)
         local s  = math.floor(seconds % 60)
         local cs = math.floor((seconds % 1) * 100)
@@ -120,9 +120,9 @@ script MuruHUDLogic extends Logic
         end, 5.0)
     end
 
-    -- ── 보상 버튼 핸들러 ─────────────────────────────────────
     @ExecSpace("ClientOnly")
     method void OnRewardChoice(integer choice)
+        -- ── 보상 버튼 핸들러 ─────────────────────────────────────
         if not self._T.rewardVisible then return end
         local player = _UserService.LocalPlayer
         if not isvalid(player) then return end

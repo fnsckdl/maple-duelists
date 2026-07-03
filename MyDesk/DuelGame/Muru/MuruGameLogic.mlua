@@ -45,20 +45,20 @@ script MuruGameLogic extends Logic
         log("[MuruGameLogic] 초기화 완료")
     end
 
-    -- 층 번호로 보스 직업 반환 (0→1→2→3 반복)
     method integer GetBossJob(integer floor)
+        -- 층 번호로 보스 직업 반환 (0→1→2→3 반복)
         return (floor - 1) % 4
     end
 
-    -- 층 번호로 보스 모델 ID 반환
     method string GetBossModelId(integer floor)
+        -- 층 번호로 보스 모델 ID 반환
         local idx = math.min(floor, #self._T.BossList)
         return self._T.BossList[idx]
     end
 
-    -- ── 타이머 틱 ─────────────────────────────────────────────
     @ExecSpace("ServerOnly")
     method void OnUpdate(number delta)
+        -- ── 타이머 틱 ─────────────────────────────────────────────
         if self._T.Sessions == nil then return end
         for userId, sess in pairs(self._T.Sessions) do
             if sess.timerRunning then
@@ -81,9 +81,9 @@ script MuruGameLogic extends Logic
         end
     end
 
-    -- ── 세션 시작 (GameManagerLogic.HandlePortalAction → "muru") ──
     @ExecSpace("ServerOnly")
     method void StartSession(string userId)
+        -- ── 세션 시작 (GameManagerLogic.HandlePortalAction → "muru") ──
         if self._T.Sessions == nil then self._T.Sessions = {} end
         if self._T.Sessions[userId] ~= nil then
             log("[MuruGameLogic] 이미 세션 중: " .. userId)
@@ -103,9 +103,9 @@ script MuruGameLogic extends Logic
         self:StartFloor(userId, 1)
     end
 
-    -- ── 층 시작 ───────────────────────────────────────────────
     @ExecSpace("ServerOnly")
     method void StartFloor(string userId, integer floor)
+        -- ── 층 시작 ───────────────────────────────────────────────
         local sess = self._T.Sessions[userId]
         if sess == nil then return end
         sess.floor      = floor
@@ -217,9 +217,9 @@ script MuruGameLogic extends Logic
             userId, floor, bossHP, dmgMult, bossJob, aiDelay, tostring(fc ~= nil and f.OriginGauge or "N/A")))
     end
 
-    -- ── 보스 사망 (FighterComponent.NotifyDeath 에서 호출) ────
     @ExecSpace("ServerOnly")
     method void OnBossDeath(string ownerUserId)
+        -- ── 보스 사망 (FighterComponent.NotifyDeath 에서 호출) ────
         local sess = self._T.Sessions[ownerUserId]
         if sess == nil then return end
         sess.timerRunning = false
@@ -244,18 +244,18 @@ script MuruGameLogic extends Logic
         end
     end
 
-    -- ── 플레이어 사망 (FighterComponent.NotifyDeath 에서 호출) ─
     @ExecSpace("ServerOnly")
     method void OnPlayerDeath(string userId)
+        -- ── 플레이어 사망 (FighterComponent.NotifyDeath 에서 호출) ─
         local sess = self._T.Sessions[userId]
         if sess == nil then return end
         log("[MuruGameLogic] 플레이어 사망: " .. userId .. " (" .. sess.floor .. "층)")
         self:EndSession(userId, false)
     end
 
-    -- ── 보상 적용 (FighterInput.RequestMuruReward → 직접 호출) ──
     @ExecSpace("ServerOnly")
     method void ApplyReward(string userId, integer choice)
+        -- ── 보상 적용 (FighterInput.RequestMuruReward → 직접 호출) ──
         local sess = self._T.Sessions[userId]
         if sess == nil or not sess.waitReward then return end
         sess.waitReward = false
@@ -306,9 +306,9 @@ script MuruGameLogic extends Logic
         self:StartFloor(userId, sess.floor + 1)
     end
 
-    -- ── 세션 종료 ─────────────────────────────────────────────
     @ExecSpace("ServerOnly")
     method void EndSession(string userId, boolean won)
+        -- ── 세션 종료 ─────────────────────────────────────────────
         local sess = self._T.Sessions[userId]
         if sess == nil then return end
 
@@ -384,9 +384,9 @@ script MuruGameLogic extends Logic
         log("[MuruGameLogic] " .. userId .. " → 로비 복귀")
     end
 
-    -- ── 나가기 버튼 (전투 중 강제 퇴장) ─────────────────────
     @ExecSpace("ServerOnly")
     method void ForceExit(string userId)
+        -- ── 나가기 버튼 (전투 중 강제 퇴장) ─────────────────────
         local sess = self._T.Sessions[userId]
         if sess == nil then return end
         log("[MuruGameLogic] " .. userId .. " 나가기 요청 (" .. sess.floor .. "층)")
@@ -403,9 +403,9 @@ script MuruGameLogic extends Logic
         self._T.Sessions[userId] = nil
     end
 
-    -- ── 보상 패널 클라이언트 RPC ──────────────────────────────
     @ExecSpace("ServerOnly")
     method void ShowRewardRPC(string userId, integer floor)
+        -- ── 보상 패널 클라이언트 RPC ──────────────────────────────
         -- userId는 Client RPC 마지막 인자로 전달 → 해당 클라이언트에만 실행
         self:ClientShowReward(floor, userId)
     end

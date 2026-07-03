@@ -247,9 +247,9 @@ script SkillManager extends Component
         end
     end
 
-    -- ─── 섀도어 플래시 점프 진입점 (공중 Alt 2회 / 슬롯11 CD 5.0s) ─
     @ExecSpace("ServerOnly")
     method void ExecuteFlashJump()
+        -- ─── 섀도어 플래시 점프 진입점 (공중 Alt 2회 / 슬롯11 CD 5.0s) ─
         local fc = self:GetFC()
         if fc == nil then return end
         ---@type FighterComponent
@@ -262,9 +262,9 @@ script SkillManager extends Component
         self:UseFlashJump()
     end
 
-    -- ─── 썬콜 텔레포트 진입점 (Shift+방향 / 슬롯12 CD 2.0s) ────────
     @ExecSpace("ServerOnly")
     method void ExecuteTeleportSkill(integer dirH, integer dirV)
+        -- ─── 썬콜 텔레포트 진입점 (Shift+방향 / 슬롯12 CD 2.0s) ────────
         local fc = self:GetFC()
         if fc == nil then return end
         ---@type FighterComponent
@@ -739,9 +739,9 @@ script SkillManager extends Component
         self:PlayVFX(self.vfxRUID_RagingBlowPlus, self.sfxRUID_RagingBlow, dir, 1.0, 0.3, 1.5, 1.5, 10, Color(1, 1, 1, 1))
     end
 
-    -- ── 발할라: 루프 부착 + 버스트 (커스텀 유지 — PlayVFX는 단발 전용) ──
     @ExecSpace("Multicast")
     method void VFX_Valhalla()
+        -- ── 발할라: 루프 부착 + 버스트 (커스텀 유지 — PlayVFX는 단발 전용) ──
         local pos = self.Entity.TransformComponent.WorldPosition
         if self.valhallaSerial > 0 then
             if self.valhallaIsEffect then _EffectService:RemoveEffect(self.valhallaSerial)
@@ -772,9 +772,9 @@ script SkillManager extends Component
         end, 10.0)
     end
 
-    -- ── 스피릿 칼리버: 전체화면 공간 베기 (커스텀 유지 — 5점 산탄) ──
     @ExecSpace("Multicast")
     method void VFX_SpiritCaliber(integer dir)
+        -- ── 스피릿 칼리버: 전체화면 공간 베기 (커스텀 유지 — 5점 산탄) ──
         local pos  = self.Entity.TransformComponent.WorldPosition
         local cs   = self.Entity.TransformComponent.Scale
         local sc   = math.abs(cs.x)
@@ -857,28 +857,28 @@ script SkillManager extends Component
         if self.sfxRUID_BM_SniperHit ~= "" then _SoundService:PlaySound(self.sfxRUID_BM_SniperHit, 0.5) end
     end
 
-    -- ── 피어싱 폭풍: 플레이어 위치에서 발생, 전방으로 뻗어나감 ──
     @ExecSpace("Multicast")
     method void VFX_BM_PiercingStorm(integer dir)
+        -- ── 피어싱 폭풍: 플레이어 위치에서 발생, 전방으로 뻗어나감 ──
         self:PlayVFX(self.vfxRUID_BM_Piercing, self.sfxRUID_BM_Piercing, dir, 0.0, 0.3, 2.0, 1.2, 12, Color(1, 1, 1, 1))
     end
 
-    -- ── 후방이동: 뒤 방향 대시 이펙트 ──────────────────────────
     @ExecSpace("Multicast")
     method void VFX_BM_BackStep(integer dir)
+        -- ── 후방이동: 뒤 방향 대시 이펙트 ──────────────────────────
         self:PlayVFX(self.vfxRUID_BM_BackStep, self.sfxRUID_BM_BackStep, -dir, 0.5, 0.2, 1.2, 1.0, 8, Color(1, 1, 1, 1))
     end
 
-    -- ── 화살 발사: 화살 엔티티에 부착 (커스텀 — Entity 파라미터) ──
     @ExecSpace("Multicast")
     method void VFX_BM_ArrowLaunch(integer dir, Entity arrowEnt)
+        -- ── 화살 발사: 화살 엔티티에 부착 (커스텀 — Entity 파라미터) ──
         -- 화살 스프라이트 자체가 보이도록 고쳐서, 겹쳐 보이던 부착 이펙트(ArrowBall)는 제거했다.
         if self.sfxRUID_BM_BasicSwing ~= "" then _SoundService:PlaySound(self.sfxRUID_BM_BasicSwing, 0.5) end
     end
 
-    -- ── 볼트 스위프: 부채꼴 3점 (커스텀 — 다중 위치) ──────────
     @ExecSpace("Multicast")
     method void VFX_BM_BoltSweep(integer dir)
+        -- ── 볼트 스위프: 부채꼴 3점 (커스텀 — 다중 위치) ──────────
         local pos  = self.Entity.TransformComponent.WorldPosition
         local cs   = self.Entity.TransformComponent.Scale
         local sc   = math.abs(cs.x)
@@ -903,9 +903,9 @@ script SkillManager extends Component
         if self.sfxRUID_BM_BoltSweep ~= "" then _SoundService:PlaySound(self.sfxRUID_BM_BoltSweep, 0.5) end
     end
 
-    -- ── 스나이핑 조준선: 회전 90도 레이저 (커스텀) ─────────────
     @ExecSpace("Multicast")
     method void VFX_BM_SniperAim(integer dir)
+        -- ── 스나이핑 조준선: 회전 90도 레이저 (커스텀) ─────────────
         local pos  = self.Entity.TransformComponent.WorldPosition
         local cs   = self.Entity.TransformComponent.Scale
         local sc   = math.abs(cs.x)
@@ -914,9 +914,9 @@ script SkillManager extends Component
             Vector3(pos.x + dir * 4*sc, pos.y + 0.3, pos.z), 90, Vector3(0.2, 6*sc, 1), false, opts)
     end
 
-    -- ── 스플릿 애로우: 분열 + 3방향 산탄 (커스텀) ──────────────
     @ExecSpace("Multicast")
     method void VFX_BM_SplitArrow(integer dir)
+        -- ── 스플릿 애로우: 분열 + 3방향 산탄 (커스텀) ──────────────
         local pos   = self.Entity.TransformComponent.WorldPosition
         local cs    = self.Entity.TransformComponent.Scale
         local sc    = math.abs(cs.x)
@@ -932,9 +932,9 @@ script SkillManager extends Component
         if self.sfxRUID_BM_SplitArrow ~= "" then _SoundService:PlaySound(self.sfxRUID_BM_SplitArrow, 0.5) end
     end
 
-    -- ── 파이널 에임 버프: 루프 부착 (커스텀) ───────────────────
     @ExecSpace("Multicast")
     method void VFX_BM_FinalAimBuff()
+        -- ── 파이널 에임 버프: 루프 부착 (커스텀) ───────────────────
         if self.finalAimSerial > 0 then
             _EffectService:RemoveEffect(self.finalAimSerial)
             self.finalAimSerial = -1
@@ -948,9 +948,9 @@ script SkillManager extends Component
         end, 10.0)
     end
 
-    -- ── 파이널 에임 오리진: 저격 착탄 (커스텀 — 다중 이펙트) ───
     @ExecSpace("Multicast")
     method void VFX_FAOrigin(integer dir)
+        -- ── 파이널 에임 오리진: 저격 착탄 (커스텀 — 다중 이펙트) ───
         local pos    = self.Entity.TransformComponent.WorldPosition
         local cs     = self.Entity.TransformComponent.Scale
         local sc     = math.abs(cs.x)
@@ -985,9 +985,9 @@ script SkillManager extends Component
         log("[SkillMgr] 섀도어 기본공격 2연타 + 표창")
     end
 
-    -- 표창 투사체 스폰 (2연타 직후 발사)
     @ExecSpace("ServerOnly")
     method void SpawnShuriken(integer dir)
+        -- 표창 투사체 스폰 (2연타 직후 발사)
         local pos = self.Entity.TransformComponent.Position
         local map = self.Entity.CurrentMap
         if not isvalid(map) then return end
@@ -1014,9 +1014,9 @@ script SkillManager extends Component
         log("[SkillMgr] 표창 발사 dir=" .. tostring(dir))
     end
 
-    -- 표창 비행 VFX: 표창 스프라이트 자체가 보이므로 겹쳐 보이던 부착 이펙트는 제거했다.
     @ExecSpace("Multicast")
     method void VFX_TF_ShurikenLaunch(integer dir, Entity shurikenEnt)
+        -- 표창 비행 VFX: 표창 스프라이트 자체가 보이므로 겹쳐 보이던 부착 이펙트는 제거했다.
     end
 
     @ExecSpace("ServerOnly")
@@ -1039,9 +1039,9 @@ script SkillManager extends Component
         end
     end
 
-    -- [Z] 새비지 블로우: 초근접 6연타 (CD 5.0s)
     @ExecSpace("ServerOnly")
     method void TF_SavageBlow()
+        -- [Z] 새비지 블로우: 초근접 6연타 (CD 5.0s)
         local dir = self:LookDir()
         local atkComp = self:GetAtk()
         for i = 1, 6 do
@@ -1056,9 +1056,9 @@ script SkillManager extends Component
         log("[SkillMgr] 새비지 블로우 6연타")
     end
 
-    -- [Z] 다크사이트: 1.5초간 투사체·마법 계열 면역 (CD 8.0s)
     @ExecSpace("ServerOnly")
     method void TF_DarkSight()
+        -- [C] 다크사이트: 1.5초간 투사체·마법 계열 면역 (CD 8.0s)
         local fc = self:GetFC()
         if fc ~= nil then
             ---@type FighterComponent
@@ -1069,9 +1069,9 @@ script SkillManager extends Component
         log("[SkillMgr] 다크사이트 (1.5초 투사체 면역)")
     end
 
-    -- [C] 헤이스트: 5초간 이동속도 1.5배 버프 (CD 12.0s)
     @ExecSpace("ServerOnly")
     method void TF_Heist()
+        -- [F] 헤이스트: 5초간 이동속도 1.5배 버프 (CD 12.0s)
         local fc = self:GetFC()
         if fc ~= nil then
             ---@type FighterComponent
@@ -1082,9 +1082,9 @@ script SkillManager extends Component
         log("[SkillMgr] 헤이스트 (이속 1.5배 5초)")
     end
 
-    -- [V] 어썰터: 적 후방 순간이동 후 관통 타격 (CD 6.0s)
     @ExecSpace("ServerOnly")
     method void TF_Assaulter()
+        -- [Q] 어썰터: 적 후방 순간이동 후 관통 타격 (CD 6.0s)
         local dir = self:LookDir()
         -- 적 앞 0.8유닛으로 이동
         local oppEnt = self:GetOpponentEntity()
@@ -1105,9 +1105,9 @@ script SkillManager extends Component
         log("[SkillMgr] 어썰터 (순간이동 기습)")
     end
 
-    -- [S] 부메랑 스텝: 전방 원형 투척 + 귀환 넉백 (CD 5.0s)
     @ExecSpace("ServerOnly")
     method void TF_BoomerangStep()
+        -- [1] 부메랑 스텝: 전방 원형 투척 + 귀환 넉백 (CD 5.0s)
         local dir = self:LookDir()
         local atkComp = self:GetAtk()
         if atkComp ~= nil then
@@ -1122,9 +1122,9 @@ script SkillManager extends Component
         log("[SkillMgr] 부메랑 스텝 (왕복 넉백)")
     end
 
-    -- [Shift] 스틸: 전방 돌진 베기 (CD 3.0s)
     @ExecSpace("ServerOnly")
     method void TF_Stele()
+        -- [X] 스틸: 전방 돌진 베기 (CD 3.0s)
         local dir = self:LookDir()
         local body = self.Entity.RigidbodyComponent
         if isvalid(body) then body:AddForce(Vector2(dir * 10, 0)) end
@@ -1138,9 +1138,9 @@ script SkillManager extends Component
         log("[SkillMgr] 스틸 (돌진 베기)")
     end
 
-    -- [A] 메소 익스플로전: 동전 폭발 + 에어본 (CD 6.0s)
     @ExecSpace("ServerOnly")
     method void TF_MesoExplosion()
+        -- [E] 메소 익스플로전: 동전 폭발 + 에어본 (CD 6.0s)
         local dir = self:LookDir()
         local atkComp = self:GetAtk()
         if atkComp ~= nil then
@@ -1152,9 +1152,9 @@ script SkillManager extends Component
         log("[SkillMgr] 메소 익스플로전 (폭발+에어본)")
     end
 
-    -- [D] 연막탄: 1초간 무적 + 반투명 은신 (CD 15.0s)
     @ExecSpace("ServerOnly")
     method void TF_SmokeScreen()
+        -- [2] 연막탄: 1초간 무적 + 반투명 은신 (CD 15.0s)
         local fc = self:GetFC()
         if fc ~= nil then
             ---@type FighterComponent
@@ -1165,9 +1165,9 @@ script SkillManager extends Component
         log("[SkillMgr] 연막탄 (1초 무적 은신)")
     end
 
-    -- [F] 절개: 적 후방으로 순간이동 후 2연격 기습 (CD 12.0s)
     @ExecSpace("ServerOnly")
     method void TF_Jeolle()
+        -- [3] 절개: 적 후방으로 순간이동 후 2연격 기습 (CD 12.0s)
         local dir = self:LookDir()
         local oppEnt = self:GetOpponentEntity()
         if isvalid(oppEnt) then
@@ -1189,9 +1189,9 @@ script SkillManager extends Component
         log("[SkillMgr] 절개 (뒤잡기 2연격)")
     end
 
-    -- [Space] 멸귀참영진: 전 화면 6연 고속 난무 (CD 20.0s)
     @ExecSpace("ServerOnly")
     method void TF_ShadowWorldSword()
+        -- [4] 멸귀참영진: 전 화면 6연 고속 난무 (CD 20.0s)
         local dir = self:LookDir()
         local atkComp = self:GetAtk()
         self:VFX_TF_ShadowWorld(dir)
@@ -1208,9 +1208,9 @@ script SkillManager extends Component
         log("[SkillMgr] 멸귀참영진 (전 화면 6연 난무)")
     end
 
-    -- [Q] 소닉 블로우: 적 앞 순간이동 + 15연타 오리진 필살기 (CD 30.0s)
     @ExecSpace("ServerOnly")
     method void TF_SonicBlow()
+        -- [V] 소닉 블로우: 적 앞 순간이동 + 15연타 오리진 필살기 (CD 30.0s)
         local dir = self:LookDir()
         local oppEnt = self:GetOpponentEntity()
         if isvalid(oppEnt) then
@@ -1240,9 +1240,9 @@ script SkillManager extends Component
         log("[SkillMgr] 소닉 블로우 15연타!")
     end
 
-    -- [Alt×2] 플래시 점프: 전방+상방 공중 대시 (CD 5.0s, ExecuteFlashJump에서 진입)
     @ExecSpace("ServerOnly")
     method void UseFlashJump()
+        -- [Alt×2] 플래시 점프: 전방+상방 공중 대시 (CD 5.0s, ExecuteFlashJump에서 진입)
         local dir = self:LookDir()
         local body = self.Entity.RigidbodyComponent
         if isvalid(body) then
@@ -1276,7 +1276,7 @@ script SkillManager extends Component
     method void Mage_SkillDispatch(integer slot)
         -- X=1(아이스 스트라이크)  C=2(체인 라이트닝)  Z=3(썬더 볼트)  F=4(블리자드)
         -- Q=5(글레이셜 체인, CD 6s)  E=6(엘퀴네스, CD 15s)  1=7(인피니티, CD 25s)
-        -- 2=8(콜드 빔, CD 5s)  3=9(매직 가드, CD 15s)
+        -- 2=8(콜드 빔, CD 5s)  3=9(매직 가드, CD 15s)  4=10(오버로드 마나, CD 20s)
         -- V=11(프로즌 라이트닝, CD 50s)  Shift=텔레포트
         if     slot == 1  then                             self:IL_IceStrike()
         elseif slot == 2  then self:SetSkillCD(2,  3.0);  self:IL_ChainLightning()
@@ -1292,9 +1292,9 @@ script SkillManager extends Component
         end
     end
 
-    -- [Z] 썬더 볼트: 자신 중심 원형 방전 (CD없음)
     @ExecSpace("ServerOnly")
     method void IL_ThunderBolt()
+        -- [Z] 썬더 볼트: 자신 중심 원형 방전 (CD없음)
         local dir = self:LookDir()
         local atkComp = self:GetAtk()
         if atkComp ~= nil then
@@ -1307,9 +1307,9 @@ script SkillManager extends Component
         log("[SkillMgr] 썬더 볼트 (원형 방전)")
     end
 
-    -- [X] 아이스 스트라이크: 전방 짧은 범위 (CD없음)
     @ExecSpace("ServerOnly")
     method void IL_IceStrike()
+        -- [X] 아이스 스트라이크: 전방 짧은 범위 (CD없음)
         local dir = self:LookDir()
         local atkComp = self:GetAtk()
         if atkComp ~= nil then
@@ -1321,9 +1321,9 @@ script SkillManager extends Component
         log("[SkillMgr] 아이스 스트라이크")
     end
 
-    -- [C] 체인 라이트닝: 유도 추격 3연타 (CD 3.0s)
     @ExecSpace("ServerOnly")
     method void IL_ChainLightning()
+        -- [C] 체인 라이트닝: 유도 추격 3연타 (CD 3.0s)
         local dir = self:LookDir()
         local atkComp = self:GetAtk()
         for i = 1, 3 do
@@ -1338,9 +1338,9 @@ script SkillManager extends Component
         log("[SkillMgr] 체인 라이트닝 추격 3타")
     end
 
-    -- [A] 글레이셜 체인: 얼음 사슬로 적을 내 앞으로 끌어당김 (CD 6.0s)
     @ExecSpace("ServerOnly")
     method void IL_GlacialChain()
+        -- [Q] 글레이셜 체인: 얼음 사슬로 적을 내 앞으로 끌어당김 (CD 6.0s)
         local dir = self:LookDir()
         local atkComp = self:GetAtk()
         if atkComp ~= nil then
@@ -1362,9 +1362,9 @@ script SkillManager extends Component
         log("[SkillMgr] 글레이셜 체인 (적 끌어당김)")
     end
 
-    -- [S] 엘퀴네스: 얼음 정령 소환 — 8초간 범위 내 적 자동 얼음 화살 (CD 15.0s)
     @ExecSpace("ServerOnly")
     method void IL_Elquines()
+        -- [E] 엘퀴네스: 얼음 정령 소환 — 8초간 범위 내 적 자동 얼음 화살 (CD 15.0s)
         local fc = self:GetFC()
         if fc ~= nil then
             ---@type FighterComponent
@@ -1394,9 +1394,9 @@ script SkillManager extends Component
         log("[SkillMgr] 엘퀴네스 소환 (8초 자동공격)")
     end
 
-    -- 엘퀴네스 주기적 자동공격 (1.5초마다 거리 내 적 타격)
     @ExecSpace("ServerOnly")
     method void ElquinesAutoAttack()
+        -- 엘퀴네스 주기적 자동공격 (1.5초마다 거리 내 적 타격)
         local fc = self:GetFC()
         if fc == nil then return end
         ---@type FighterComponent
@@ -1419,9 +1419,9 @@ script SkillManager extends Component
         log("[SkillMgr] 엘퀴네스 얼음 화살 발사")
     end
 
-    -- [D] 인피니티: 5초간 모든 스킬 쿨타임 절반 단축 (CD 25.0s)
     @ExecSpace("ServerOnly")
     method void IL_Infinity()
+        -- [1] 인피니티: 5초간 모든 스킬 쿨타임 절반 단축 (CD 25.0s)
         local fc = self:GetFC()
         if fc ~= nil then
             ---@type FighterComponent
@@ -1432,9 +1432,9 @@ script SkillManager extends Component
         log("[SkillMgr] 인피니티 (쿨타임 50% 5초)")
     end
 
-    -- [F] 블리자드: 전 화면 궁극기 + 빙결(슬로우 5초) (CD 20.0s)
     @ExecSpace("ServerOnly")
     method void IL_Blizzard()
+        -- [F] 블리자드: 전 화면 궁극기 + 빙결(슬로우 5초) (CD 20.0s)
         local atkComp = self:GetAtk()
         if atkComp ~= nil then
             ---@type AttackComponent
@@ -1455,9 +1455,9 @@ script SkillManager extends Component
         log("[SkillMgr] 블리자드 (전 화면 빙결 궁극기)")
     end
 
-    -- [2] 콜드 빔: 전방 원거리 얼음 투사체 + 슬로우 2초 (CD 5.0s)
     @ExecSpace("ServerOnly")
     method void IL_ColdBeam()
+        -- [2] 콜드 빔: 전방 원거리 얼음 투사체 + 슬로우 2초 (CD 5.0s)
         local dir = self:LookDir()
         local atkComp = self:GetAtk()
         if atkComp ~= nil then
@@ -1478,9 +1478,9 @@ script SkillManager extends Component
         log("[SkillMgr] 콜드 빔 (슬로우 2초)")
     end
 
-    -- [3] 매직 가드: 5초간 피해 40% 감소 (CD 15.0s)
     @ExecSpace("ServerOnly")
     method void IL_MagicGuard()
+        -- [3] 매직 가드: 5초간 피해 40% 감소 (CD 15.0s)
         local fc = self:GetFC()
         if fc ~= nil then
             ---@type FighterComponent
@@ -1491,9 +1491,9 @@ script SkillManager extends Component
         log("[SkillMgr] 매직 가드 (5초 피해 40% 감소)")
     end
 
-    -- [4] 오버로드 마나: HP 150 소모 → 5초간 공격력 1.5배 (CD 20.0s)
     @ExecSpace("ServerOnly")
     method void IL_OverloadMana()
+        -- [4] 오버로드 마나: HP 150 소모 → 5초간 공격력 1.5배 (CD 20.0s)
         local fc = self:GetFC()
         if fc ~= nil then
             ---@type FighterComponent
@@ -1508,9 +1508,9 @@ script SkillManager extends Component
         log("[SkillMgr] 오버로드 마나 (HP 150 소모, 5초간 1.5배)")
     end
 
-    -- [V] 프로즌 라이트닝: 전 화면 얼음+번개 폭풍 + 3초 기절 (CD 50.0s)
     @ExecSpace("ServerOnly")
     method void IL_FrozenLightning()
+        -- [V] 프로즌 라이트닝: 전 화면 얼음+번개 폭풍 + 3초 기절 (CD 50.0s)
         local dir = self:LookDir()
         local atkComp = self:GetAtk()
         if atkComp ~= nil then
@@ -1532,9 +1532,9 @@ script SkillManager extends Component
         log("[SkillMgr] 프로즌 라이트닝 (전 화면 빙결 기절 3초)")
     end
 
-    -- [Shift+방향] 텔레포트: 입력 방향으로 순간이동 (CD 2.0s, ExecuteTeleportSkill에서 진입)
     @ExecSpace("ServerOnly")
     method void UseTeleport(integer dirH, integer dirV)
+        -- [Shift+방향] 텔레포트: 입력 방향으로 순간이동 (CD 2.0s, ExecuteTeleportSkill에서 진입)
         -- dirH: -1=왼쪽/0=중립(바라보는 방향)/1=오른쪽  dirV: -1=아래/0=중립/1=위
         local pos    = self.Entity.TransformComponent.WorldPosition
         local faceDir = self:LookDir()

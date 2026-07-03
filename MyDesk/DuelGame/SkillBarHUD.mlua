@@ -175,9 +175,9 @@ script SkillBarHUD extends Logic
         log("[SkillBarHUD] 멀티 매칭 요청")
     end
 
-    -- 스킬 아이콘 RUID를 각 Icon 스프라이트에 적용 (직업 전환 시 재호출)
     @ExecSpace("ClientOnly")
     method void ApplyIconRUIDs(integer jobClass)
+        -- 스킬 아이콘 RUID를 각 Icon 스프라이트에 적용 (직업 전환 시 재호출)
         local icons = {
             self.icon0,  self.icon1,  self.icon2,  self.icon3,
             self.icon4,  self.icon5,  self.icon6,  self.icon7,
@@ -225,9 +225,9 @@ script SkillBarHUD extends Logic
         log("[SkillBarHUD] 아이콘 RUID 적용 완료 (jobClass=" .. jobClass .. ")")
     end
 
-    -- 모든 오버레이 초기 숨김
     @ExecSpace("ClientOnly")
     method void HideAllOverlays()
+        -- 모든 오버레이 초기 숨김
         local overlays = {
             self.cdOverlay0,  self.cdOverlay1,  self.cdOverlay2,
             self.cdOverlay3,  self.cdOverlay4,  self.cdOverlay5,
@@ -245,9 +245,9 @@ script SkillBarHUD extends Logic
         end
     end
 
-    -- 20fps 폴링: FighterComponent에서 JobLevel·SkillCDs 읽어 HUD 갱신
     @ExecSpace("ClientOnly")
     method void Tick()
+        -- 20fps 폴링: FighterComponent에서 JobLevel·SkillCDs 읽어 HUD 갱신
         local player = _UserService.LocalPlayer
         if not isvalid(player) then return end
 
@@ -303,9 +303,9 @@ script SkillBarHUD extends Logic
         end
     end
 
-    -- 쿨다운 오버레이 갱신 (Radial360 FillAmount)
     @ExecSpace("ClientOnly")
     method void UpdateCD(
+        -- 쿨다운 오버레이 갱신 (Radial360 FillAmount)
         SpriteGUIRendererComponent overlay,
         TextComponent txt,
         number cd,
@@ -323,23 +323,23 @@ script SkillBarHUD extends Logic
         txt.Text = tostring(math.ceil(cd))
     end
 
-    -- 오버레이·텍스트 숨김
     @ExecSpace("ClientOnly")
     method void HideOverlay(SpriteGUIRendererComponent overlay, TextComponent txt)
+        -- 오버레이·텍스트 숨김
         if not isvalid(overlay) or not isvalid(txt) then return end
         overlay.Entity.Enable = false
         txt.Entity.Enable = false
     end
 
-    -- 아이콘 해금/잠금 색상 처리
-    -- icon0: 기본공격 (항상 해금)
-    -- icon1·2: 1차 스킬 (JobLevel ≥ 1)
-    -- icon3·4: 2차 스킬 (JobLevel ≥ 2)
-    -- icon5·6: 3차 스킬 (JobLevel ≥ 3)
-    -- icon7·8: 4차 스킬 (JobLevel ≥ 4)
-    -- icon9·10: 5차 스킬 (JobLevel ≥ 5)
     @ExecSpace("ClientOnly")
     method void UpdateIconColors(integer jl)
+        -- 아이콘 해금/잠금 색상 처리
+        -- icon0: 기본공격 (항상 해금)
+        -- icon1·2: 1차 스킬 (JobLevel ≥ 1)
+        -- icon3·4: 2차 스킬 (JobLevel ≥ 2)
+        -- icon5·6: 3차 스킬 (JobLevel ≥ 3)
+        -- icon7·8: 4차 스킬 (JobLevel ≥ 4)
+        -- icon9·10: 5차 스킬 (JobLevel ≥ 5)
         local unlockLevels = {0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5}
         local icons = {
             self.icon0,  self.icon1,  self.icon2,

@@ -6,9 +6,9 @@ script BMArrowProjectile extends Component
     property string  hitRUID = "387ec9be0573409da315e5b3392f41e4"  -- 파이널 어택:활 hit/0
     property integer initDir = 0  -- 0=미초기화 / 1=오른쪽 / -1=왼쪽
 
-    -- BA_Bowmaster에서 스폰 직후 호출 (dir, 발사자 엔티티)
     @ExecSpace("ServerOnly")
     method void Init(integer dir, Entity shooter)
+        -- BA_Bowmaster에서 스폰 직후 호출 (dir, 발사자 엔티티)
         self._T.shooter = shooter
         self._T.dist    = 0.0
         self._T.done    = false
@@ -93,9 +93,9 @@ script BMArrowProjectile extends Component
         end
     end
 
-    -- 피격 처리: 발사자의 AttackComponent로 AttackFrom 호출
     @ExecSpace("ServerOnly")
     method void DoHit(Vector3 pos)
+        -- 피격 처리: 발사자의 AttackComponent로 AttackFrom 호출
         self._T.done = true
         local shooter = self._T.shooter
         if isvalid(shooter) then
@@ -112,9 +112,9 @@ script BMArrowProjectile extends Component
         self.Entity:Destroy()
     end
 
-    -- 피격 VFX (클라이언트 — 엔티티 소멸 후에도 재생됨)
     @ExecSpace("Client")
     method void ShowHitEffect(number px, number py, number pz)
+        -- 피격 VFX (클라이언트 — 엔티티 소멸 후에도 재생됨)
         if self.hitRUID == "" then return end
         local m = self.Entity.CurrentMap
         if not isvalid(m) then return end
