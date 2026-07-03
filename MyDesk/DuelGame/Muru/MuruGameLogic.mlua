@@ -45,6 +45,21 @@ script MuruGameLogic extends Logic
         log("[MuruGameLogic] 초기화 완료")
     end
 
+    @ExecSpace("ServerOnly")
+    method void FlushFieldEntities(Entity map)
+        -- 층 전환/포기 시 이전 층의 투사체 등을 강제로 청소한다.
+        -- (소환수·장판이 늘어나면 이 목록에 스크립트 타입만 추가하면 됨)
+        local fieldScriptTypes = { "script.BMArrowProjectile", "script.TFShurikenProjectile" }
+        for _, typeName in ipairs(fieldScriptTypes) do
+            local comps = map:GetChildComponentsByTypeName(typeName, true)
+            for _, comp in ipairs(comps) do
+                if isvalid(comp) and isvalid(comp.Entity) then
+                    comp.Entity:Destroy()
+                end
+            end
+        end
+    end
+
     method integer GetBossJob(integer floor)
         -- 층 번호로 보스 직업 반환 (0→1→2→3 반복)
         return (floor - 1) % 4
@@ -147,6 +162,9 @@ script MuruGameLogic extends Logic
             sess.bossEnt = nil
         end
 
+        -- 층 전환 시 이전 층에 남아있던 투사체 등 필드 엔티티 전부 제거
+        self:FlushFieldEntities(muruMap)
+
         local bossEnt = _SpawnService:SpawnByModelId(bossModelId, bossId, bossPos, muruMap)
         if not isvalid(bossEnt) then
             log("[MuruGameLogic] 보스 스폰 실패 — EntryKey=" .. bossModelId)
@@ -202,10 +220,7 @@ script MuruGameLogic extends Logic
             for i = 1, 16 do
                 f.SkillCDs[i] = 0.0
             end
-            local mv = playerEnt.MovementComponent
-            if isvalid(mv) then
-                mv.InputSpeed = f.BaseInputSpeed * (1 + sess.speedBonus)
-            end
+            f:RecalcInputSpeed()
         end
 
         sess.timerRunning = true
@@ -281,17 +296,15 @@ script MuruGameLogic extends Logic
             end
             log(string.format("[MuruGameLogic] %s 보상②: 공격 +15%% 총%.0f%%", userId, sess.dmgBonus * 100))
         elseif choice == 3 then
-            sess.speedBonus = sess.speedBonus + 0.10
+            -- 이동속도 보상은 최대 50%까지만 중첩된다
+            sess.speedBonus = math.min(0.5, sess.speedBonus + 0.10)
             if fc ~= nil then
                 ---@type FighterComponent
                 local f = fc
                 f.MuruSpeedBonus = sess.speedBonus
-                local mv = playerEnt.MovementComponent
-                if isvalid(mv) then
-                    mv.InputSpeed = f.BaseInputSpeed * (1 + sess.speedBonus)
-                end
+                f:RecalcInputSpeed()
             end
-            log(string.format("[MuruGameLogic] %s 보상③: 이속 +10%% 총%.0f%%", userId, sess.speedBonus * 100))
+            log(string.format("[MuruGameLogic] %s 보상③: 이속 +10%% 총%.0f%% (최대 50%%)", userId, sess.speedBonus * 100))
         elseif choice == 4 then
             if fc ~= nil then
                 ---@type FighterComponent
@@ -373,8 +386,7 @@ script MuruGameLogic extends Logic
             f.MuruSpeedBonus = 0.0
             f.OppUserId      = ""
             f.HP             = f.MaxHP
-            local mv = playerEnt.MovementComponent
-            if isvalid(mv) then mv.InputSpeed = f.BaseInputSpeed end
+            f:RecalcInputSpeed()
             -- 비석(DEAD) 상태 해제: Revive()가 ProcessRevive + StateComponent를 함께 복구
             f:Revive()
         end
@@ -386,11 +398,26 @@ script MuruGameLogic extends Logic
 
     @ExecSpace("ServerOnly")
     method void ForceExit(string userId)
-        -- ── 나가기 버튼 (전투 중 강제 퇴장) ─────────────────────
+        -- ── 포기하기 (전투 중 강제 퇴장) ─────────────────────────
+        -- EndSession과 달리 결과 화면 대기(5초) 없이 즉시 세션을
+        -- 정리하고 로비로 돌려보낸다 — 플레이어가 직접 선택한 종료라
+        -- "클리어/실패" 결과를 보여줄 필요가 없다.
         local sess = self._T.Sessions[userId]
         if sess == nil then return end
-        log("[MuruGameLogic] " .. userId .. " 나가기 요청 (" .. sess.floor .. "층)")
-        self:EndSession(userId, false)
+        log("[MuruGameLogic] " .. userId .. " 포기하기 (" .. sess.floor .. "층)")
+
+        if sess.bossEnt ~= nil and isvalid(sess.bossEnt) then
+            _EntityService:Destroy(sess.bossEnt)
+            sess.bossEnt = nil
+        end
+
+        local muruMap = _EntityService:GetEntityByPath("/maps/" .. self.MURU_MAP)
+        if isvalid(muruMap) then
+            self:FlushFieldEntities(muruMap)
+        end
+
+        self._T.Sessions[userId] = nil
+        self:ReturnToLobby(userId)
     end
 
     @ExecSpace("ServerOnly")

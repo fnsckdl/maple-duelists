@@ -148,8 +148,7 @@ script FighterComponent extends Component
             if self.SlowTimer <= 0 then
                 self.IsSlowed = false
                 self.SlowTimer = 0
-                local mv = self.Entity.MovementComponent
-                if isvalid(mv) then mv.InputSpeed = self.BaseInputSpeed end
+                self:RecalcInputSpeed()
             end
         end
 
@@ -255,8 +254,7 @@ script FighterComponent extends Component
         self.MagicGuardTimer  = 0
         self.OverloadActive   = false
         self.OverloadTimer    = 0
-        local mv = self.Entity.MovementComponent
-        if isvalid(mv) then mv.InputSpeed = self.BaseInputSpeed end
+        self:RecalcInputSpeed()
         log("[FighterComponent] 라운드 " .. round .. " 리셋 완료. JobLevel=" .. round)
     end
 
@@ -355,16 +353,14 @@ script FighterComponent extends Component
     method void ActivateHeist(number duration)
         self.HeistActive = true
         self.HeistTimer  = duration
-        local mv = self.Entity.MovementComponent
-        if isvalid(mv) then mv.InputSpeed = self.BaseInputSpeed * 1.5 end
+        self:RecalcInputSpeed()
     end
 
     @ExecSpace("ServerOnly")
     method void DeactivateHeist()
         self.HeistActive = false
         self.HeistTimer  = 0
-        local mv = self.Entity.MovementComponent
-        if isvalid(mv) then mv.InputSpeed = self.BaseInputSpeed end
+        self:RecalcInputSpeed()
     end
 
     @ExecSpace("ServerOnly")
@@ -416,8 +412,20 @@ script FighterComponent extends Component
     method void ApplySlow(number duration)
         self.IsSlowed  = true
         self.SlowTimer = duration
+        self:RecalcInputSpeed()
+    end
+
+    @ExecSpace("ServerOnly")
+    method void RecalcInputSpeed()
+        -- 이동속도에 영향을 주는 모든 버프/디버프를 합연산으로 더한 뒤
+        -- 한 번에 적용한다 (헤이스트·무릉 이속 보상·슬로우가 서로
+        -- 덮어쓰지 않도록 통일된 진입점).
+        local mult = 1.0 + math.min(self.MuruSpeedBonus, 0.5)
+        if self.HeistActive then mult = mult + 0.5 end
+        if self.IsSlowed    then mult = mult - 0.6 end
+        mult = math.max(0.1, mult)
         local mv = self.Entity.MovementComponent
-        if isvalid(mv) then mv.InputSpeed = self.BaseInputSpeed * 0.4 end
+        if isvalid(mv) then mv.InputSpeed = self.BaseInputSpeed * mult end
     end
 
     method boolean IsAlwaysCritical()

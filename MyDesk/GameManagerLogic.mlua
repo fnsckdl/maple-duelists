@@ -5,8 +5,10 @@ script GameManagerLogic extends Logic
 
 	property any userLeaveHandler = nil
 
-	property Vector3 P1_SPAWN    = Vector3(-4.0, 1.0, 0.0)
-	property Vector3 P2_SPAWN    = Vector3( 4.0, 1.0, 0.0)
+	property Vector3 P1_SPAWN = Vector3(-4.0, 1.0, 0.0)
+
+	property Vector3 P2_SPAWN = Vector3( 4.0, 1.0, 0.0)
+
 	property Vector3 LOBBY_SPAWN = Vector3( 0.0, 1.0, 0.0)
 
 	@ExecSpace("ServerOnly")
@@ -559,7 +561,7 @@ script GameManagerLogic extends Logic
 		            local f = fc1
 		            f.RoomTimer = t
 		        end
-
+		
 		        if self:IsDummyId(room.p2UserId) then return end
 		        local fc2 = self:GetFighterByUserId(room.p2UserId)
 		        if fc2 ~= nil then

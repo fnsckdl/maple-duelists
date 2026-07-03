@@ -104,8 +104,6 @@ script SkillManager extends Component
     property string vfxRUID_TF_ShurikenFly   = "1615c0292d0a4660a9472f122291c9a0"
     property string vfxRUID_TF_Assaulter     = ""
     property string sfxRUID_TF_Assaulter     = ""
-    property string vfxRUID_TF_Assassinate   = ""
-    property string sfxRUID_TF_Assassinate   = ""
 
     -- ════════════════════════════════════════════════════════════
     --  [썬콜] VFX / SFX RUID
@@ -123,14 +121,12 @@ script SkillManager extends Component
     property string vfxRUID_IL_Teleport        = ""
     property string vfxRUID_IL_TeleportMastery = ""
     property string vfxRUID_IL_IceAge          = ""
-    property string vfxRUID_IL_ArcThunder      = ""
     property string vfxRUID_IL_OverloadMana    = "b79bf157adf9421cbe25942f9003284a"
     property string sfxRUID_IL_OverloadMana    = "505f047f3dbc435484ead6ca2cf89dae"
     property string sfxRUID_IL_Teleport        = "4c1eb6001e9c47eda239cc58443b79cd"
     property string sfxRUID_IL_Lightning       = "3c837a89f39e4e038b0a3a378de9a377"
     property string sfxRUID_IL_Ice             = "452571b69b534d91a993de876f3c7887"
     property string sfxRUID_IL_Elquines        = "9cd912e261bd4b72bd3113d7c8cbc6ed"
-    property string sfxRUID_IL_ArcThunder      = ""
 
     -- 엘퀴네스 자동공격 타이머 ID
     property integer elquinesTimerId = 0
