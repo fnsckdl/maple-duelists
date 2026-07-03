@@ -2,7 +2,7 @@
 script TFShurikenProjectile extends Component
 
     property number  speed   = 8.0
-    property number  maxDist = 7.0
+    property number  maxDist = 9.1
     property string  hitRUID = ""   -- 피격 이펙트 RUID (SkillManager에서 주입)
     property integer initDir = 0    -- 0=미초기화 / 1=오른쪽 / -1=왼쪽
 

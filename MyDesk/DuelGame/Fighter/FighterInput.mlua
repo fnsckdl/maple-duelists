@@ -231,7 +231,7 @@ script FighterInput extends Component
 
     @ExecSpace("Server")
     method void RequestFlashJump()
-        -- 섀도어 플래시 점프 (공중 Alt 2회 연타, CD 5.0s / 슬롯11)
+        -- 섀도어 플래시 점프 (공중 Alt 2회 연타, CD 5.0s / 슬롯13)
         if not self:CanAct() then return end
         local sm = self.Entity:GetComponent("script.SkillManager")
         if sm == nil then return end

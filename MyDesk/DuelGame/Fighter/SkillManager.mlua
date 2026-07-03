@@ -249,16 +249,18 @@ script SkillManager extends Component
 
     @ExecSpace("ServerOnly")
     method void ExecuteFlashJump()
-        -- ─── 섀도어 플래시 점프 진입점 (공중 Alt 2회 / 슬롯11 CD 5.0s) ─
+        -- ─── 섀도어 플래시 점프 진입점 (공중 Alt 2회 / 슬롯13 CD 5.0s) ─
+        -- 슬롯11은 V키 소닉 블로우(Shadower_SkillDispatch)가 쓰므로
+        -- 같은 슬롯을 쓰면 둘 중 하나가 쓰일 때마다 서로 쿨타임을 막는다.
         local fc = self:GetFC()
         if fc == nil then return end
         ---@type FighterComponent
         local f = fc
-        if f.SkillCDs[11] ~= nil and f.SkillCDs[11] > 0 then
-            log("[SkillMgr] 플래시 점프 쿨타임 중: " .. string.format("%.1f", f.SkillCDs[11]) .. "s")
+        if f.SkillCDs[13] ~= nil and f.SkillCDs[13] > 0 then
+            log("[SkillMgr] 플래시 점프 쿨타임 중: " .. string.format("%.1f", f.SkillCDs[13]) .. "s")
             return
         end
-        self:SetSkillCD(11, 5.0)
+        self:SetSkillCD(13, 5.0)
         self:UseFlashJump()
     end
 
@@ -1557,8 +1559,14 @@ script SkillManager extends Component
 
     @ExecSpace("Multicast")
     method void VFX_TF_BasicHit(integer dir)
-        -- 기본공격 타격 스파크
-        self:PlayVFX(self.vfxRUID_TF_SavageBlow, "", dir, 0.5, 0.3, 0.7, 0.7, 10, Color(1, 1, 1, 1))
+        -- 새비지 블로우 이펙트: pivot이 프레임 오른쪽 끝에 있는 에셋이라
+        -- 공통 PlayVFX의 FlipX=(dir<0) 규칙을 그대로 쓰면 진행 방향과
+        -- 반대로 뻗어 보인다 — 이 스킬만 FlipX를 반대로 준다.
+        local base = self.Entity.TransformComponent.WorldPosition
+        local cs   = self.Entity.TransformComponent.Scale
+        local wp   = Vector3(base.x + 0.5 * dir, base.y + 0.3, base.z)
+        local opts = { SortingLayer = "Character", OrderInLayer = 10, FlipX = (dir > 0), Color = Color(1, 1, 1, 1) }
+        _EffectService:PlayEffect(self.vfxRUID_TF_SavageBlow, self.Entity, wp, 0, Vector3(math.abs(cs.x) * 0.7, math.abs(cs.y) * 0.7, 1), false, opts)
     end
 
     @ExecSpace("Multicast")

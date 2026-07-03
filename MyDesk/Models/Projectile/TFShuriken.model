@@ -32,8 +32,8 @@
           },
           "Value": {
             "$type": "MOD.Core.MODVector3, MOD.Core",
-            "x": 2,
-            "y": 2,
+            "x": 1,
+            "y": 1,
             "z": 1
           }
         },
@@ -44,7 +44,7 @@
             "$type": "MODNativeType",
             "type": "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
           },
-          "Value": "66e6771194f44633a4311b0aa35d5d33"
+          "Value": "2b6de5c42f9e4741b9cd705eb710b5f7"
         },
         {
           "TargetType": "MOD.Core.SpriteRendererComponent",
